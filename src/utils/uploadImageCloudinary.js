@@ -1,21 +1,37 @@
 import cloudinary from "../config/cloudinary.js";
 
-const uploadImageCloudinary = async (image, folder = "escortdirectory") => {
-  const buffer = image?.buffer
-    ? image.buffer
-    : Buffer.from(await image.arrayBuffer());
+const uploadImageCloudinary = async (image, folder = "gallery/images") => {
+  try {
+    // Buffer create karna: multer buffer or web file
+    const buffer = image?.buffer
+      ? image.buffer
+      : Buffer.from(await image.arrayBuffer());
 
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader.upload_stream(
-      { folder },
-      (error, result) => {
-        if (error) {
-          return reject(error);
+    // Return promise for upload_stream
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder,
+          resource_type: "image" // Only image
+        },
+        (error, result) => {
+          if (error) {
+            console.error("Cloudinary upload error:", error);
+            return reject(new Error("Image upload failed"));
+          }
+          resolve({
+            public_id: result.public_id,
+            secure_url: result.secure_url
+          });
         }
-        resolve(result);
-      }
-    ).end(buffer);
-  });
+      );
+
+      uploadStream.end(buffer);
+    });
+  } catch (err) {
+    console.error("UploadImageCloudinary failed:", err);
+    throw new Error("Image upload failed");
+  }
 };
 
 export default uploadImageCloudinary;

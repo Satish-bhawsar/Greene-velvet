@@ -11,6 +11,7 @@ import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
 import { sendVerificationEmail } from "../utils/emailService.js";
 import otpModel from "../models/otpModel.js";
 import uploadVideoCloudinary from "../utils/uploadVideoCloudinary.js";
+import deleteImageCloudinary from "../utils/deleteImageCloudinary.js";
 
 // Escort Register controll
 export async function registerEscortcontroller(request, response) {
@@ -650,15 +651,26 @@ export async function uploadImagescontroller(request, response) {
 
         const deletedArr = deletedImages ? JSON.parse(deletedImages) : [];
 
-        // 1️⃣ Remove deleted images from DB (by URL)
+        // 1️⃣ Delete images from Cloudinary & DB
         if (deletedArr.length > 0) {
             const escort = await EscortModel.findOne({ escortId });
+            if (escort) {
+                // Cloudinary delete
+                for (let item of deletedArr) {
+                    if (item.public_id) {
+                        await deleteImageCloudinary(item.public_id);
+                    }
+                }
 
-            escort.gallery.photos = escort.gallery.photos.filter(
-                photo => !deletedArr.includes(photo.url)
-            );
-
-            await escort.save();
+                // DB delete by URL
+                const urlsToDelete = deletedArr.map(item => item.url).filter(Boolean);
+                if (urlsToDelete.length > 0) {
+                    await EscortModel.updateOne(
+                        { escortId },
+                        { $pull: { "gallery.photos": { url: { $in: urlsToDelete } } } }
+                    );
+                }
+            }
         }
 
         // 2️⃣ Upload new images to Cloudinary
@@ -666,7 +678,6 @@ export async function uploadImagescontroller(request, response) {
         if (request.files && request.files.length > 0) {
             for (let file of request.files) {
                 const uploadResult = await uploadImageCloudinary(file, "gallery/images");
-
                 uploadedImages.push({
                     public_id: uploadResult.public_id,
                     url: uploadResult.secure_url
@@ -680,9 +691,15 @@ export async function uploadImagescontroller(request, response) {
             );
         }
 
-        // 3️⃣ Fetch updated escort with last 6 images
+        // 3️⃣ Fetch updated escort
         const updatedEscort = await EscortModel.findOne({ escortId }).lean();
+
+        // 4️⃣ Keep only last 6 images in DB
         const last6Images = updatedEscort.gallery.photos.slice(-6);
+        await EscortModel.updateOne(
+            { escortId },
+            { $set: { "gallery.photos": last6Images } }
+        );
 
         return response.status(200).json({
             message: "Gallery updated successfully",
@@ -698,6 +715,7 @@ export async function uploadImagescontroller(request, response) {
         });
 
     } catch (error) {
+        console.error(error);
         return response.status(500).json({
             message: error.message || error,
             success: false,
