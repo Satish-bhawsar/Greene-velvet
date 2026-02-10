@@ -63,9 +63,9 @@ export async function registerEscortcontroller(request, response) {
         const newEscort = new EscortModel(payload)
         const save = await newEscort.save()
 
-        const verifyLink = `http://localhost:5000/escort/verify-email?token=${token}`
+        const verifyLink = `https://greene-velvet.onrender.com/escort/verify-email?token=${token}`
 
-        await sendVerificationEmail(email, verifyLink);
+        sendVerificationEmail(email, verifyLink);
 
         return response.json({
             message: "Verification link sent to your email",
