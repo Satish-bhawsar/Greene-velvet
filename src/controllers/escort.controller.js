@@ -12,6 +12,7 @@ import { sendVerificationEmail } from "../utils/emailService.js";
 import otpModel from "../models/otpModel.js";
 import uploadVideoCloudinary from "../utils/uploadVideoCloudinary.js";
 import deleteImageCloudinary from "../utils/deleteImageCloudinary.js";
+import deleteVideoCloudinary from "../utils/deleteVideoCloudinary.js";
 
 // Escort Register controll
 export async function registerEscortcontroller(request, response) {
@@ -737,17 +738,29 @@ export async function uploadVideoscontroller(req, res) {
             });
         }
 
-        // Parse deletedVideos array
         const deletedArr = deletedVideos ? JSON.parse(deletedVideos) : [];
 
-        // 1️⃣ Remove deleted videos from DB
+        // 1️⃣ Delete videos from Cloudinary & DB
         if (deletedArr.length > 0) {
             const escort = await EscortModel.findOne({ escortId });
             if (escort && escort.gallery?.videos?.length) {
-                escort.gallery.videos = escort.gallery.videos.filter(
-                    video => !deletedArr.includes(video.url) // compare URL
-                );
-                await escort.save();
+
+                // Cloudinary delete
+                for (let urlOrObj of deletedArr) {
+                    // If frontend sends { public_id, url } object
+                    if (typeof urlOrObj === "object" && urlOrObj.public_id) {
+                        await deleteVideoCloudinary(urlOrObj.public_id);
+                    }
+                }
+
+                // DB delete using URL
+                const urlsToDelete = deletedArr.map(item => (typeof item === "object" ? item.url : item)).filter(Boolean);
+                if (urlsToDelete.length > 0) {
+                    await EscortModel.updateOne(
+                        { escortId },
+                        { $pull: { "gallery.videos": { url: { $in: urlsToDelete } } } }
+                    );
+                }
             }
         }
 
@@ -755,7 +768,7 @@ export async function uploadVideoscontroller(req, res) {
         let uploadedVideos = [];
         if (req.files && req.files.length > 0) {
             for (let file of req.files) {
-                const uploadResult = await uploadVideoCloudinary(file, "gallery/videos"); // resource_type: video
+                const uploadResult = await uploadVideoCloudinary(file, "gallery/videos");
                 uploadedVideos.push({
                     public_id: uploadResult.public_id,
                     url: uploadResult.secure_url
@@ -769,12 +782,18 @@ export async function uploadVideoscontroller(req, res) {
             );
         }
 
-        // 3️⃣ Fetch updated escort with last 6 videos
+        // 3️⃣ Fetch updated escort
         const updatedEscort = await EscortModel.findOne({ escortId }).lean();
+
+        // 4️⃣ Keep only last 6 videos
         const last6Videos = updatedEscort.gallery.videos.slice(-6);
+        await EscortModel.updateOne(
+            { escortId },
+            { $set: { "gallery.videos": last6Videos } }
+        );
 
         return res.status(200).json({
-            message: "Video upload successful",
+            message: "Video gallery updated successfully",
             success: true,
             error: false,
             data: {
@@ -785,7 +804,9 @@ export async function uploadVideoscontroller(req, res) {
                 }
             }
         });
+
     } catch (error) {
+        console.error(error);
         return res.status(500).json({
             message: error.message || error,
             success: false,
@@ -793,6 +814,7 @@ export async function uploadVideoscontroller(req, res) {
         });
     }
 }
+
 
 // fetch all verified escorts
 export async function verifiedEscortcontroller(request, response) {
