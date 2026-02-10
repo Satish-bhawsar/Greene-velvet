@@ -1,0 +1,828 @@
+import bcryptjs from "bcryptjs";
+import jwt from 'jsonwebtoken';
+import axios from "axios";
+import EscortModel from '../models/escortModel.js'
+import crypto from "crypto";
+import { generatedescortId } from '../utils/generatedId.js'
+import EscortdetailsModel from "../models/escortdetailsModel.js";
+import EscortessentialModel from "../models/escortessentialModel.js";
+import EscortpreferModel from "../models/escortpreferModel.js";
+import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
+import { sendVerificationEmail } from "../utils/emailService.js";
+import otpModel from "../models/otpModel.js";
+import uploadVideoCloudinary from "../utils/uploadVideoCloudinary.js";
+
+// Escort Register controll
+export async function registerEscortcontroller(request, response) {
+    try {
+
+        const { name, email, password, mobile, country, city, account_classification, account_type, adverties_category } = request.body
+        console.log(request.body);
+
+        if (!name || !email || !password || !mobile) {
+            return response.status(400).json({
+                message: "Provide name, email, password, mobile",
+                error: true,
+                success: false
+            })
+        }
+
+
+        const escort = await EscortModel.findOne({ email })
+
+        if (escort) {
+            return response.json({
+                message: "Already register email",
+                error: true,
+                success: false
+            })
+        }
+
+        const escortId = await generatedescortId()
+
+        const token = crypto.randomBytes(32).toString("hex")
+
+        const salt = await bcryptjs.genSalt(10)
+        const hashPassword = await bcryptjs.hash(password, salt)
+
+        const payload = {
+            escortId,
+            name,
+            email,
+            password: hashPassword,
+            mobile,
+            country,
+            city,
+            account_classification,
+            account_type,
+            adverties_category,
+            emailVerifyToken: token,
+            emailVerifyExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        }
+
+        const newEscort = new EscortModel(payload)
+        const save = await newEscort.save()
+
+        const verifyLink = `http://localhost:5000/escort/verify-email?token=${token}`
+
+        await sendVerificationEmail(email, verifyLink);
+
+        return response.json({
+            message: "Verification link sent to your email",
+            error: false,
+            success: true,
+            data: {
+                escortId: save.escortId,
+                mobile: save.mobile,
+                email: save.email,
+            }
+        })
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
+// Escort verify email controll
+export async function verifyEmailcontroller(request, response) {
+    try {
+        const { token } = request.query;
+
+        const escort = await EscortModel.findOne({
+            emailVerifyToken: token,
+            emailVerifyExpiry: { $gt: Date.now() },
+        });
+
+        if (!escort) {
+            return response.redirect("http://localhost:5173/link-expired");
+        }
+
+        escort.isEmailVerified = true;
+        escort.emailVerifyToken = null;
+        escort.emailVerifyExpiry = null;
+
+        await escort.save();
+
+        response.redirect("http://localhost:5173/confirmmobilenumber");
+
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            success: false,
+            error: true,
+        })
+    }
+}
+
+// Escort change mobile number controll
+export async function changeMobilenumber(request, response) {
+    try {
+        const { escortId, mobile } = request.body;
+
+        if (!escortId || !mobile) {
+            return response.status(400).json({
+                message: "EscortId and mobile is required",
+                success: false,
+                error: true
+            })
+        }
+
+        const updateMobile = await EscortModel.findOneAndUpdate(
+            { escortId },
+            {
+                mobile: mobile,
+                isMobileVerified: false,
+            }
+        )
+
+        if (!updateMobile) {
+            return response.status(404).json({
+                message: "User not found",
+                success: false,
+                error: true
+            });
+        }
+
+        return response.json({
+            message: "Mobile number change successfully",
+            success: true,
+            error: false,
+            data: {
+                mobile: mobile
+            },
+        });
+
+    } catch (error) {
+        return response.json({
+            message: error.message || error,
+            success: false,
+            error: true
+        })
+    }
+}
+
+// Escort send otp controll
+export async function sendOtpcontroller(request, response) {
+    try {
+
+        const { escortId, mobile } = request.body;
+
+        const escort = await EscortModel.findOne({ escortId });
+
+        if (!escort) {
+            return response.status(400).json({
+                message: "Unauthorised access failed",
+                success: false,
+                error: true
+            })
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        await otpModel.create({
+            mobile,
+            otp,
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 min
+        });
+
+        // Prepare SMS payload
+        const smsPayload = {
+            sms_text: `Your Greene Velvet OTP is ${otp}`,
+            numbers: [mobile],
+        };
+
+        // Send SMS using Cellcast API
+        const cellcastResponse = await axios.post(
+            "https://cellcast.com.au/api/v3/send-sms",
+            smsPayload,
+            {
+                headers: {
+                    "APPKEY": process.env.CELLCAST_APPKEY,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        console.log("CELLCAST RESPONSE:", cellcastResponse.data);
+
+        return response.json({
+            message: "Otp sent successfully",
+            success: true,
+            error: false,
+
+        })
+    } catch (error) {
+        console.log("SEND OTP ERROR:", error.response?.data || error.message);
+
+        return response.status(500).json({
+            message: error.message || error,
+            success: false,
+            error: true
+        })
+    }
+
+}
+
+// Escort verify mobile otp controll
+export async function verifyMobileotp(request, response) {
+    try {
+        let { escortId, mobile, otp } = request.body; // 👈 let use karo
+
+        console.log("mobile and otp", mobile, otp);
+
+        if (!mobile || !otp) {
+            return response.status(400).json({
+                message: "Mobile and OTP required",
+                success: false,
+                error: true
+            });
+        }
+
+        // clean mobile number
+
+        console.log("clean mobile:", mobile, "otp:", otp);
+
+        const escort = await EscortModel.findOne({ escortId });
+        console.log("search escort by mobile", escort);
+
+        if (!escort) {
+            return response.status(404).json({
+                message: "Mobile number not registered",
+                success: false,
+                error: true
+            });
+        }
+
+        const record = await otpModel.findOne({
+            mobile,
+            otp: otp,
+            isUsed: false,
+            expiresAt: { $gt: new Date() }
+        });
+
+        console.log("record", record);
+
+        if (!record) {
+            return response.status(400).json({
+                message: "Invalid or expired OTP",
+                success: false,
+                error: true
+            });
+        }
+
+        await EscortModel.updateOne(
+            { escortId },
+            { $set: { isMobileVerified: true } } // ✅ correct field
+        );
+
+        record.isUsed = true;
+        await record.save();
+
+        return response.json({
+            message: "Mobile verified successfully",
+            success: true,
+            error: false
+        });
+
+    } catch (error) {
+        console.log("VERIFY OTP ERROR:", error);
+        return response.status(500).json({
+            message: error.message || "OTP verification failed",
+            success: false,
+            error: true
+        });
+    }
+}
+
+// Escort add details controll
+export async function escortdetailscontroller(request, response) {
+    try {
+        const { escortId, escortdetail, escortessential, escortprefer } = request.body;
+
+        if (!escortId) {
+            return response.status(400).json({
+                message: "EscortId missing",
+                success: false,
+                error: true
+            })
+        }
+
+        // ✅ Details
+        const detailsDoc = await EscortdetailsModel.findOneAndUpdate(
+            { escortId },
+            { $set: escortdetail },
+            { new: true, upsert: true }
+        );
+
+        // ✅ Essential
+        const essentialDoc = await EscortessentialModel.findOneAndUpdate(
+            { escortId },
+            { $set: escortessential },
+            { new: true, upsert: true }
+        );
+
+        // ✅ Prefer (array safe)
+        const preferDoc = await EscortpreferModel.findOneAndUpdate(
+            { escortId },
+            { $set: { escortprefer: escortprefer } }, // 👈 explicit
+            { new: true, upsert: true }
+        );
+
+
+        // ✅ Link to main Escort table
+        await EscortModel.findOneAndUpdate(
+            { escortId },
+            {
+                $set: {
+                    escortdetail: detailsDoc._id,
+                    escortessential: essentialDoc._id,
+                    escortprefer: preferDoc._id,
+                }
+            }
+        );
+
+        return response.status(200).json({
+            message: "Details saved ",
+            error: false,
+            success: true
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        });
+    }
+}
+
+// Escort upload verification doc controll
+export async function escortUploadverification(request, response) {
+    try {
+        const { escortId } = request.body;
+
+        if (!escortId) {
+            return response.status(400).json({
+                message: "escortId required",
+                success: false,
+                error: true
+            })
+        }
+
+        if (!request.files?.verificationselfie || !request.files?.verificationgovtId) {
+            return response.status(400).json({
+                message: "Selfie and Govt Id required",
+                success: false,
+                error: true
+            })
+        }
+
+        const selfieUpload = await uploadImageCloudinary(request.files.verificationselfie[0], "verification/verificationselfie");
+        const govtIdUpload = await uploadImageCloudinary(request.files.verificationgovtId[0], "verification/verificationgovtId");
+
+        const uploadEscort = await EscortModel.findOneAndUpdate(
+            { escortId },
+            {
+                verificationselfie: selfieUpload.secure_url,
+                verificationgovtId: govtIdUpload.secure_url,
+                docsuploadStatus: "pending",
+            },
+            { new: true }
+        );
+
+        if (!uploadEscort) {
+            return response.status(404).json({
+                message: "Escort not found",
+                success: false,
+                error: true
+            });
+        }
+
+        return response.json({
+            message: "Verification documents uploaded successfully",
+            success: true,
+            error: false,
+            data: {
+                verificationselfie: selfieUpload.secure_url,
+                verificationgovtId: govtIdUpload.secure_url,
+            },
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+
+}
+
+// Subcribe plan controll
+export async function subcribePlans(request, response) {
+    try {
+        const { title, plan } = request.body;
+        return response.status(400).json({
+            message: "",
+            success: false,
+            error: true
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            success: false,
+            error: true
+        })
+    }
+}
+
+// Escort Login controll
+export async function escortLogincontroller(request, response) {
+    try {
+        const { email, password } = request.body;
+
+        if (!email || !password) {
+            return response.status(400).json({
+                message: "Provide email, and password",
+                success: false,
+                error: true
+            })
+        }
+
+        const escort = await EscortModel.findOne({ email }).select("+password");
+
+        if (!escort) {
+            return response.status(400).json({
+                message: "User not register",
+                success: false,
+                error: true
+            })
+        }
+
+        if (escort.status !== "Active") {
+            return response.status(400).json({
+                message: "Contact to admin",
+                success: false,
+                error: true
+            })
+        }
+
+        const checkPassword = await bcryptjs.compare(password, escort.password);
+
+        if (!checkPassword) {
+            return response.status(400).json({
+                message: "check your password",
+                success: false,
+                error: true
+            })
+        }
+
+        const token = jwt.sign(
+            {
+                _id: escort._id,
+                escortId: escort.escortId,
+                role: escort.role || "Escort"
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        );
+
+        return response.json({
+            message: "Login successful",
+            success: true,
+            error: false,
+            data: {
+                escortId: escort.escortId,
+                role: escort.role,
+                token: token
+            }
+
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            success: false,
+            error: true
+        })
+    }
+
+}
+
+// Escorts fetch 
+export async function fetchEscortdetailscontroller(request, response) {
+    try {
+        const { escortId } = request.query;
+
+        if (!escortId) {
+            return response.status(400).json({
+                message: "provide escortId",
+                error: true,
+                success: false
+            })
+        }
+
+        const escortDetails = await EscortModel.findOne({ escortId })
+            .populate("escortdetail")
+            .populate("escortessential")
+            .populate("escortprefer");
+
+        if (escortDetails.length === 0) {
+            return response.status(400).json({
+                message: "escorts not found",
+                error: true,
+                success: false
+            })
+        }
+
+        return response.status(200).json({
+            message: "Escort details fetched",
+            error: false,
+            success: true,
+            data: escortDetails
+        })
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
+// logout controll
+export async function logoutEscortcontroller(request, response) {
+    try {
+        const { escortId, role } = request.body;
+
+        return response.status(200).json({
+            message: "Logged out successfully",
+            success: true,
+            error: false,
+        })
+
+    } catch (error) {
+        return response.status(500).json({
+            message: "Logged out failed",
+            success: false,
+            error: true,
+        })
+    }
+}
+
+// upload Avatar
+export async function uploadAvatarcontroller(request, response) {
+    try {
+        const { escortId } = request.body;
+
+        if (!escortId) {
+            return response.status(400).json({
+                message: "escortId required",
+                success: false,
+                error: true
+            })
+        }
+
+        if (!request.files?.avatar) {
+            return response.status(400).json({
+                message: "avatar required",
+                success: false,
+                error: true
+            })
+        }
+
+        const avatarUpload = await uploadImageCloudinary(request.files.avatar[0], "profileImg/avatar");
+
+        const uploadEscort = await EscortModel.findOneAndUpdate(
+            { escortId },
+            {
+                avatar: avatarUpload.secure_url,
+
+            },
+            { new: true }
+        );
+
+        if (!uploadEscort) {
+            return response.status(404).json({
+                message: "Escort not found",
+                success: false,
+                error: true
+            });
+        }
+
+        return response.status(200).json({
+            message: "avatar uploaded successfully",
+            success: true,
+            error: false,
+            data: {
+                avatar: avatarUpload.secure_url,
+            },
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+
+}
+
+// upload gallery images
+export async function uploadImagescontroller(request, response) {
+    try {
+        const { escortId, deletedImages } = request.body;
+
+        if (!escortId) {
+            return response.status(400).json({
+                message: "escortId required",
+                success: false,
+                error: true
+            });
+        }
+
+        const deletedArr = deletedImages ? JSON.parse(deletedImages) : [];
+
+        // 1️⃣ Remove deleted images from DB (by URL)
+        if (deletedArr.length > 0) {
+            const escort = await EscortModel.findOne({ escortId });
+
+            escort.gallery.photos = escort.gallery.photos.filter(
+                photo => !deletedArr.includes(photo.url)
+            );
+
+            await escort.save();
+        }
+
+        // 2️⃣ Upload new images to Cloudinary
+        let uploadedImages = [];
+        if (request.files && request.files.length > 0) {
+            for (let file of request.files) {
+                const uploadResult = await uploadImageCloudinary(file, "gallery/images");
+
+                uploadedImages.push({
+                    public_id: uploadResult.public_id,
+                    url: uploadResult.secure_url
+                });
+            }
+
+            // Push new images to DB
+            await EscortModel.updateOne(
+                { escortId },
+                { $push: { "gallery.photos": { $each: uploadedImages } } }
+            );
+        }
+
+        // 3️⃣ Fetch updated escort with last 6 images
+        const updatedEscort = await EscortModel.findOne({ escortId }).lean();
+        const last6Images = updatedEscort.gallery.photos.slice(-6);
+
+        return response.status(200).json({
+            message: "Gallery updated successfully",
+            success: true,
+            error: false,
+            data: {
+                ...updatedEscort,
+                gallery: {
+                    ...updatedEscort.gallery,
+                    photos: last6Images
+                }
+            }
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            success: false,
+            error: true
+        });
+    }
+}
+
+// upload gallery videos
+export async function uploadVideoscontroller(req, res) {
+    try {
+        const { escortId, deletedVideos } = req.body;
+
+        if (!escortId) {
+            return res.status(400).json({
+                message: "escortId required",
+                success: false,
+                error: true
+            });
+        }
+
+        // Parse deletedVideos array
+        const deletedArr = deletedVideos ? JSON.parse(deletedVideos) : [];
+
+        // 1️⃣ Remove deleted videos from DB
+        if (deletedArr.length > 0) {
+            const escort = await EscortModel.findOne({ escortId });
+            if (escort && escort.gallery?.videos?.length) {
+                escort.gallery.videos = escort.gallery.videos.filter(
+                    video => !deletedArr.includes(video.url) // compare URL
+                );
+                await escort.save();
+            }
+        }
+
+        // 2️⃣ Upload new videos to Cloudinary
+        let uploadedVideos = [];
+        if (req.files && req.files.length > 0) {
+            for (let file of req.files) {
+                const uploadResult = await uploadVideoCloudinary(file, "gallery/videos"); // resource_type: video
+                uploadedVideos.push({
+                    public_id: uploadResult.public_id,
+                    url: uploadResult.secure_url
+                });
+            }
+
+            // Push new videos to DB
+            await EscortModel.updateOne(
+                { escortId },
+                { $push: { "gallery.videos": { $each: uploadedVideos } } }
+            );
+        }
+
+        // 3️⃣ Fetch updated escort with last 6 videos
+        const updatedEscort = await EscortModel.findOne({ escortId }).lean();
+        const last6Videos = updatedEscort.gallery.videos.slice(-6);
+
+        return res.status(200).json({
+            message: "Video upload successful",
+            success: true,
+            error: false,
+            data: {
+                ...updatedEscort,
+                gallery: {
+                    ...updatedEscort.gallery,
+                    videos: last6Videos
+                }
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message || error,
+            success: false,
+            error: true
+        });
+    }
+}
+
+// fetch all verified escorts
+export async function verifiedEscortcontroller(request, response) {
+    try {
+        const { role, isVerified } = request.query;
+
+        let filter = {};
+
+        if (role) filter.role = role;
+
+        if (isVerified !== undefined)
+            filter.isVerified = isVerified === "true";
+
+        const escorts = await EscortModel.find(filter);
+
+        if (escorts.length === 0) {
+            return response.status(400).json({
+                message: "escorts not found",
+                error: true,
+                success: false
+            })
+        }
+
+        return response.status(200).json({
+            message: "Escort list fetched",
+            error: false,
+            success: true,
+            data: escorts
+        })
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
+export async function updateEscortcontroller(request, response) {
+    try {
+        const escortId = request.user._id
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}

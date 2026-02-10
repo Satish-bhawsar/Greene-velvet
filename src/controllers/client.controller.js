@@ -1,0 +1,60 @@
+import bcryptjs from "bcryptjs";
+import jwt from "jsonwebtoken";
+import ClientModel from "../models/clientModel.js";
+import { generatedclientId } from "../utils/generatedId.js";
+
+
+export async function registerClientcontroller(request, response) {
+    try {
+        const { name, email, password, mobile } = request.body
+
+        if (!name || !email || !password || !mobile) {
+            return response.status(400).json({
+                message: "Provide name, email, password, mobile",
+                error: true,
+                success: false
+            })
+        }
+
+        const client = await ClientModel.findOne({ email })
+
+        if (client) {
+            return response.json({
+                message: "Already register email",
+                error: true,
+                success: false
+            })
+        }
+
+        const clientId = await generatedclientId()
+
+        const salt = await bcryptjs.genSalt(10)
+        const hashPassword = await bcryptjs.hash(password, salt)
+
+        const payload = {
+            clientId,
+            name,
+            email,
+            password: hashPassword,
+            mobile,
+        }
+
+        const newClient = new ClientModel(payload)
+        const save = await newClient.save()
+
+
+        return response.json({
+            message: "User register successfully",
+            error: false,
+            success: true,
+            data: save
+        })
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
