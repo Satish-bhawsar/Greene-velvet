@@ -870,7 +870,7 @@ export async function updateEscortcontroller(request, response) {
 // update highlights 
 export async function updateHighlightscontroller(request, response) {
     try {
-        const { escortId, incall, outcall, highlights, about } = request.body;
+        const { escortId, incall, outcall, rateFrom, highlights, about } = request.body;
 
         if (!escortId) {
             return response.status(400).json({
@@ -883,6 +883,7 @@ export async function updateHighlightscontroller(request, response) {
         const updateData = {
             incall,
             outcall,
+            rateFrom,
             highlights,
             about
         };

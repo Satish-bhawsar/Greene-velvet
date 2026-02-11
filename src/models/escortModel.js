@@ -62,6 +62,10 @@ const EscortSchema = new mongoose.Schema({
         default: false
     },
 
+    rateFrom: {
+        type: Number
+    },
+
     about: {
         type: String,
         default: ""
