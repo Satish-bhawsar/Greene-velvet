@@ -880,13 +880,14 @@ export async function updateHighlightscontroller(request, response) {
             });
         }
 
-        const updateData = {
-            incall,
-            outcall,
-            rateFrom,
-            highlights,
-            about
-        };
+        const updateData = {};
+
+        if (incall !== undefined) updateData.incall = incall;
+        if (outcall !== undefined) updateData.outcall = outcall;
+        if (highlights) updateData.highlights = highlights;
+        if (about) updateData.about = about;
+        if (rateFrom) updateData.rateFrom = rateFrom;
+
 
         const details = await EscortModel.findOneAndUpdate(
             { escortId: escortId },
