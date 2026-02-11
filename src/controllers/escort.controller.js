@@ -866,3 +866,53 @@ export async function updateEscortcontroller(request, response) {
         })
     }
 }
+
+// update highlights 
+export async function updateHighlightscontroller(request, response) {
+    try {
+        const { escortId, incall, outcall, highlights, about } = request.body;
+
+        if (!escortId) {
+            return response.status(400).json({
+                message: "escortId is missing!",
+                success: false,
+                error: true
+            });
+        }
+
+        const updateData = {
+            incall,
+            outcall,
+            highlights,
+            about
+        };
+
+        const details = await EscortModel.findOneAndUpdate(
+            { escortId: escortId },
+            { $set: updateData },
+            { new: true }   // upsert mat lagao unless naya doc banana ho
+        );
+
+        if (!details) {
+            return response.status(404).json({
+                message: "Escort not found",
+                success: false,
+                error: true
+            });
+        }
+
+        return response.status(200).json({
+            message: "Update successful",
+            success: true,
+            error: false,
+            data: details
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+    }
+}

@@ -51,6 +51,27 @@ const EscortSchema = new mongoose.Schema({
         default: "Escort"
     },
 
+    /* ================= About and Highlights ================= */
+    incall: {
+        type: Boolean,
+        default: false
+    },
+
+    outcall: {
+        type: Boolean,
+        default: false
+    },
+
+    about: {
+        type: String,
+        default: ""
+    },
+
+    highlights: {
+        type: String,
+        default: "Every frame is a little more tempting than the last."
+    },
+
     /* ================= DOCUMENT VERIFICATION ================= */
     address_details: [
         {
@@ -245,6 +266,7 @@ const EscortSchema = new mongoose.Schema({
     ],
 
     /* ================= SERVICES & RATES ================= */
+
     service: [
         {
             type: mongoose.Schema.ObjectId,
