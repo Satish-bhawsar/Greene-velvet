@@ -12,7 +12,7 @@ app.use(cors({
         "http://localhost:5173",
         "http://testing.greenevelvet.com",
         "http://localhost:5174",
-        "http://admin.greenevelvet.com/"
+        "http://admin.greenevelvet.com"
     ]
 }))
 app.use(express.json())
