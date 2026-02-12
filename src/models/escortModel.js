@@ -175,10 +175,16 @@ const EscortSchema = new mongoose.Schema({
             ref: "Availability"
         }
     ],
+    availability_start: {
+        type: Date,
+        default: null,
+    },
+
     availability_expiry: {
         type: Date,
         default: null
     },
+
     numberOfAvailability: {
         type: Number,
         default: 0
