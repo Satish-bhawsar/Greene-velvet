@@ -535,8 +535,8 @@ export async function fetchEscortdetailscontroller(request, response) {
             .populate("escortdetail")
             .populate("escortessential")
             .populate("escortprefer")
-            .populate("Services")
-            .populate("Rates")
+            .populate("services")
+            .populate("rates")
 
         if (escortDetails.length === 0) {
             return response.status(400).json({
