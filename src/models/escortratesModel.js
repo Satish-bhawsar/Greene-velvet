@@ -13,7 +13,7 @@ const RatesSchema = new mongoose.Schema({
         trim: true
     },
     duration: {
-        type: Number,
+        type: String,
         required: [true, "Service title is required"]
     },
     isActive: {
