@@ -1005,7 +1005,7 @@ export async function escortRatescontroller(request, response) {
             message: "rates added successfully",
             success: true,
             error: false,
-            data: newService
+            data: newRates
         });
 
     } catch (error) {
