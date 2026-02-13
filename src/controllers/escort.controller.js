@@ -534,7 +534,9 @@ export async function fetchEscortdetailscontroller(request, response) {
         const escortDetails = await EscortModel.findOne({ escortId })
             .populate("escortdetail")
             .populate("escortessential")
-            .populate("escortprefer");
+            .populate("escortprefer")
+            .populate("Services")
+            .populate("Rates")
 
         if (escortDetails.length === 0) {
             return response.status(400).json({
@@ -987,7 +989,7 @@ export async function escortRatescontroller(request, response) {
             isActive
         });
 
-        if(!newRates) {
+        if (!newRates) {
             return response.status(404).json({
                 message: "rates add failed",
                 success: false,
@@ -1007,6 +1009,35 @@ export async function escortRatescontroller(request, response) {
             error: false,
             data: newRates
         });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || "server error",
+            success: false,
+            error: true
+        });
+    }
+}
+
+export async function fetchescortServicescontroller(request, response) {
+    try {
+        const { escortId } = request.query;
+
+        if (!escortId) {
+            return response.status(400).json({
+                message: "escortId is missing",
+                success: false,
+                error: true
+            });
+        }
+
+        return response.status(200).json({
+            message: "fetched services",
+            success: true,
+            error: false,
+            data: services
+        });
+
 
     } catch (error) {
         return response.status(500).json({
