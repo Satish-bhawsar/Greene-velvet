@@ -9,7 +9,8 @@ const RatesSchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        required: [true, "Service title is required"]
+        required: [true, "Service title is required"],
+        trim: true
     },
     duration: {
         type: Number,

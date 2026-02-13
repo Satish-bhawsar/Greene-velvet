@@ -925,8 +925,6 @@ export async function escortServicescontroller(request, response) {
     try {
         const { escortId, title, label, price, description, isActive } = request.body;
 
-        console.log("request body", request.body);
-
         // ✅ correct validation
         if (!escortId) {
             return response.status(400).json({
@@ -945,7 +943,6 @@ export async function escortServicescontroller(request, response) {
             description,
             isActive
         });
-        console.log("newServices", newService);
 
         // ✅ push service _id into Escort model
         await EscortModel.findOneAndUpdate(
@@ -989,6 +986,14 @@ export async function escortRatescontroller(request, response) {
             duration,
             isActive
         });
+
+        if(!newRates) {
+            return response.status(404).json({
+                message: "rates add failed",
+                success: false,
+                error: true
+            })
+        }
 
         // ✅ push rates _id into Escort model
         await EscortModel.findOneAndUpdate(
