@@ -7,7 +7,7 @@ const ServiceSchema = new mongoose.Schema({
         required: [true, "Service title is required"],
         trim: true
     },
-    lable: {
+    label: {
         type: String,
         required: [true, "Service title is required"],
         trim: true
