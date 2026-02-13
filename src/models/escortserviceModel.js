@@ -4,21 +4,22 @@ const ServiceSchema = new mongoose.Schema({
     escortId: String,
     title: {
         type: String,
-        required: [true, "Service title is required"]
+        required: [true, "Service title is required"],
+        trim: true
     },
-    label: {
+    lable: {
         type: String,
-        required: [true, "Service title is required"]
+        required: [true, "Service title is required"],
+        trim: true
     },
     price: {
         type: Number,
         required: [true, "Service title is required"]
     },
-    duration: {
-        type: Number,
-        required: [true, "Service title is required"]
+    description: {
+        type: String,
+        trim: true
     },
-    description: String,
     isActive: {
         type: Boolean,
         default: true
@@ -27,6 +28,6 @@ const ServiceSchema = new mongoose.Schema({
 }, { timestamps: true }
 )
 
-const ServiceModel = mongoose.model("/service", ServiceSchema)
+const ServiceModel = mongoose.model("Services", ServiceSchema)
 
 export default ServiceModel;

@@ -277,10 +277,17 @@ const EscortSchema = new mongoose.Schema({
 
     /* ================= SERVICES & RATES ================= */
 
-    service: [
+    services: [
         {
             type: mongoose.Schema.ObjectId,
             ref: "Services"
+        }
+    ],
+
+    rates: [
+        {
+            type: mongoose.Schema.ObjectId,
+            ref: "Rates"
         }
     ],
     tours: [
@@ -289,30 +296,7 @@ const EscortSchema = new mongoose.Schema({
             ref: "Tours"
         }
     ],
-    incallRates: [
-        {
-            type: mongoose.Schema.ObjectId,
-            ref: "IncallRates"
-        }
-    ],
-    outcallRates: [
-        {
-            type: mongoose.Schema.ObjectId,
-            ref: "OutcallRates"
-        }
-    ],
-    incallService: [
-        {
-            type: mongoose.Schema.ObjectId,
-            ref: "IncallService"
-        }
-    ],
-    outcallService: [
-        {
-            type: mongoose.Schema.ObjectId,
-            ref: "OutcallService"
-        }
-    ],
+
 
     /* ================= GALLERY ================= */
     avatar: {

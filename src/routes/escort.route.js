@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { changeMobilenumber, escortdetailscontroller, escortLogincontroller, escortUploadverification, fetchEscortdetailscontroller, logoutEscortcontroller, registerEscortcontroller, sendOtpcontroller, updateHighlightscontroller, uploadAvatarcontroller, uploadImagescontroller, uploadVideoscontroller, verifiedEscortcontroller, verifyEmailcontroller, verifyMobileotp } from '../controllers/escort.controller.js'
+import { changeMobilenumber, escortdetailscontroller, escortLogincontroller, escortRatescontroller, escortServicescontroller, escortUploadverification, fetchEscortdetailscontroller, logoutEscortcontroller, registerEscortcontroller, sendOtpcontroller, updateHighlightscontroller, uploadAvatarcontroller, uploadImagescontroller, uploadVideoscontroller, verifiedEscortcontroller, verifyEmailcontroller, verifyMobileotp } from '../controllers/escort.controller.js'
 import upload from "../middleware/multer.js";
 import { protect } from "../middleware/auth.js";
 
@@ -26,4 +26,6 @@ escortRouter.post("/upload-gallery-images", upload.array("photos", 6), uploadIma
 escortRouter.post("/upload-gallery-videos", upload.array("videos", 6), uploadVideoscontroller)
 escortRouter.get("/fetch-escorts", verifiedEscortcontroller)
 escortRouter.patch("/update-highlights", updateHighlightscontroller)
+escortRouter.post("/add-services", escortServicescontroller)
+escortRouter.post("/add-rates", escortRatescontroller)
 export default escortRouter;

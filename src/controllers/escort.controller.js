@@ -13,6 +13,8 @@ import otpModel from "../models/otpModel.js";
 import uploadVideoCloudinary from "../utils/uploadVideoCloudinary.js";
 import deleteImageCloudinary from "../utils/deleteImageCloudinary.js";
 import deleteVideoCloudinary from "../utils/deleteVideoCloudinary.js";
+import ServiceModel from "../models/escortserviceModel.js";
+import RatesModel from "../models/escortratesModel.js";
 
 // Escort Register controll
 export async function registerEscortcontroller(request, response) {
@@ -917,4 +919,92 @@ export async function updateHighlightscontroller(request, response) {
             error: true
         });
     }
+}
+
+export async function escortServicescontroller(request, response) {
+  try {
+    const { escortId, title, label, price, description, isActive } = request.body;
+
+    // ✅ correct validation
+    if (!escortId) {
+      return response.status(400).json({
+        message: "escortId is missing",
+        success: false,
+        error: true
+      });
+    }
+
+    // ✅ create service
+    const newService = await ServiceModel.create({
+      escortId,
+      title,
+      label,
+      price,
+      description,
+      isActive
+    });
+
+    // ✅ push service _id into Escort model
+    await EscortModel.findOneAndUpdate(
+      { escortId: escortId },
+      { $push: { services: newService._id } }
+    );
+
+    return response.status(200).json({
+      message: "Service added successfully",
+      success: true,
+      error: false,
+      data: newService
+    });
+
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || "server error",
+      success: false,
+      error: true
+    });
+  }
+}
+
+export async function escortRatescontroller(request, response) {
+  try {
+    const { escortId,  label, price, duration, isActive } = request.body;
+
+    if (!escortId) {
+      return response.status(400).json({
+        message: "escortId is missing",
+        success: false,
+        error: true
+      });
+    }
+
+    // ✅ create rates
+    const newRates = await RatesModel.create({
+      escortId,
+      label,
+      price,
+      duration,
+      isActive
+    });
+
+    // ✅ push rates _id into Escort model
+    await EscortModel.findOneAndUpdate(
+      { escortId: escortId },
+      { $push: { rates: newRates._id } }
+    );
+
+    return response.status(200).json({
+      message: "rates added successfully",
+      success: true,
+      error: false,
+      data: newService
+    });
+
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || "server error",
+      success: false,
+      error: true
+    });
+  }
 }
