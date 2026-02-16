@@ -568,7 +568,7 @@ export async function logoutEscortcontroller(request, response) {
         const { escortId, role } = request.body;
 
         if (!escortId || !role) {
-            return res.status(400).json({
+            return response.status(400).json({
                 message: "Invalid token",
                 success: false,
                 error: true
@@ -586,9 +586,9 @@ export async function logoutEscortcontroller(request, response) {
             })
 
         }
-        user.refresh_token = "";
-        user.onlineStatus = false;
-        await user.save();
+        escort.refresh_token = "";
+        escort.onlineStatus = false;
+        await escort.save();
 
         return response.status(200).json({
             message: "Logged out successfully",
