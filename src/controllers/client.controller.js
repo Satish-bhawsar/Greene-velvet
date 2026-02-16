@@ -73,7 +73,7 @@ export async function logoutClientcontroller(request, response) {
         }
 
         const client = await ClientModel.findOne({ clientId: clientId });
-        
+
         if (!client) {
             return response.status(404).json({
                 message: "user not found",
@@ -82,9 +82,9 @@ export async function logoutClientcontroller(request, response) {
             })
 
         }
-        user.refresh_token = "";
-        user.onlineStatus = false;
-        await user.save();
+        client.refresh_token = "";
+        client.onlineStatus = false;
+        await client.save();
 
         return response.status(200).json({
             message: "Logged out successfully",

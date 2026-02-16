@@ -1,10 +1,11 @@
 import { request, response, Router } from "express";
-import { registerClientcontroller } from "../controllers/client.controller.js";
+import { logoutClientcontroller, registerClientcontroller } from "../controllers/client.controller.js";
 import { protect } from "../middleware/auth.js";
 
 const clientRouter = Router()
 
 clientRouter.post("/register", registerClientcontroller);
+clientRouter.post("/logout",logoutClientcontroller);
 
 // Protected example route
 clientRouter.get("/client-data", protect("Client"), async (request, res) => {
