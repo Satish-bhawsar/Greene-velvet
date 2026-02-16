@@ -52,10 +52,11 @@ export async function loginUsercontroller(request, response) {
             });
         }
 
-        // 🎫 Token
+
+        // 🎫 Token (custom IDs only)
         const token = jwt.sign(
             {
-                userId: user._id,
+                userId: role === "Escort" ? user.escortId : user.clientId,
                 role: role
             },
             process.env.JWT_SECRET,
@@ -67,7 +68,8 @@ export async function loginUsercontroller(request, response) {
             success: true,
             error: false,
             data: {
-                userId: user._id,
+                escortId: role === "Escort" ? user.escortId : null,
+                clientId: role === "Client" ? user.clientId : null,
                 role: role,
                 token: token
             }
