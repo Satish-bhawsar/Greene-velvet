@@ -3,6 +3,7 @@ import cors from "cors";
 import escortRouter from "./routes/escort.route.js";
 import clientRouter from "./routes/client.route.js"
 import adminRouter from "./routes/admin.route.js";
+import loginRouter from "./routes/login.route.js";
 
 const app = express();
 
@@ -30,6 +31,8 @@ app.get("/", (req, res) => {
 app.use('/admin', adminRouter);
 app.use('/escort', escortRouter);
 app.use('/client', clientRouter);
+app.use('/user', loginRouter);
+
 
 /* Global Error Handler */
 app.use((err, req, res, next) => {
