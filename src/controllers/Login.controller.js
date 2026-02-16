@@ -26,7 +26,7 @@ export async function loginUsercontroller(request, response) {
         }
 
         if (!user) {
-            return response.status(404).json({
+            return response.status(401).json({
                 message: "User not found",
                 success: false,
                 error: true
@@ -35,7 +35,7 @@ export async function loginUsercontroller(request, response) {
 
         // ⚠️ Status check only for Escort
         if (role === "Escort" && user.status !== "Active") {
-            return response.status(400).json({
+            return response.status(403).json({
                 message: "Contact to admin",
                 success: false,
                 error: true
@@ -45,23 +45,29 @@ export async function loginUsercontroller(request, response) {
         // 🔐 Password check
         const checkPassword = await bcryptjs.compare(password, user.password);
         if (!checkPassword) {
-            return response.status(400).json({
+            return response.status(401).json({
                 message: "Check your password",
                 success: false,
                 error: true
             });
         }
 
+        const payload = {
+            userId: role === "Escort" ? user.escortId : user.clientId,
+            role: role
+        };
 
-        // 🎫 Token (custom IDs only)
+        // Generate token
         const token = jwt.sign(
-            {
-                userId: role === "Escort" ? user.escortId : user.clientId ,
-                role: role
-            },
+            payload,
             process.env.JWT_SECRET,
             { expiresIn: "7d" }
         );
+
+        user.refresh_token = token;
+        user.last_login_date = new Date();
+        user.onlineStatus = true;
+        await user.save();
 
         return response.json({
             message: "Login successful",
@@ -83,3 +89,5 @@ export async function loginUsercontroller(request, response) {
         });
     }
 }
+
+

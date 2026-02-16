@@ -567,6 +567,29 @@ export async function logoutEscortcontroller(request, response) {
     try {
         const { escortId, role } = request.body;
 
+        if (!escortId || !role) {
+            return res.status(400).json({
+                message: "Invalid token",
+                success: false,
+                error: true
+            });
+        }
+
+
+        const escort = await EscortModel.findOne({ escortId: escortId });
+        
+        if (!escort) {
+            return response.status(404).json({
+                message: "escort not found",
+                success: false,
+                error: true,
+            })
+
+        }
+        user.refresh_token = "";
+        user.onlineStatus = false;
+        await user.save();
+
         return response.status(200).json({
             message: "Logged out successfully",
             success: true,
@@ -575,7 +598,7 @@ export async function logoutEscortcontroller(request, response) {
 
     } catch (error) {
         return response.status(500).json({
-            message: "Logged out failed",
+            message: "Internal server error",
             success: false,
             error: true,
         })
@@ -818,7 +841,6 @@ export async function uploadVideoscontroller(req, res) {
         });
     }
 }
-
 
 // fetch all verified escorts
 export async function verifiedEscortcontroller(request, response) {

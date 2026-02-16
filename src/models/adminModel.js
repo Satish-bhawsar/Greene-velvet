@@ -50,6 +50,18 @@ const AdminSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    refresh_token: {
+        type: String,
+        default: ""
+    },
+    last_login_date: {
+        type: Date,
+        default: "",
+    },
+    onlineStatus: {
+        type: Boolean,
+        default: false
+    }
 
 }, { timestamps: true }
 )

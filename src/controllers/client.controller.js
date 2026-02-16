@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import ClientModel from "../models/clientModel.js";
 import { generatedclientId } from "../utils/generatedId.js";
 
-
+// client register controll
 export async function registerClientcontroller(request, response) {
     try {
         const { name, email, password, mobile } = request.body
@@ -55,6 +55,48 @@ export async function registerClientcontroller(request, response) {
             message: error.message || error,
             error: true,
             success: false
+        })
+    }
+}
+
+// client logout controll
+export async function logoutClientcontroller(request, response) {
+    try {
+        const { clientId, role } = request.body;
+
+        if (!clientId || !role) {
+            return res.status(400).json({
+                message: "Invalid token",
+                success: false,
+                error: true
+            });
+        }
+
+        const client = await ClientModel.findOne({ clientId: clientId });
+        
+        if (!client) {
+            return response.status(404).json({
+                message: "user not found",
+                success: false,
+                error: true,
+            })
+
+        }
+        user.refresh_token = "";
+        user.onlineStatus = false;
+        await user.save();
+
+        return response.status(200).json({
+            message: "Logged out successfully",
+            success: true,
+            error: false,
+        })
+
+    } catch (error) {
+        return response.status(500).json({
+            message: "Internal server error",
+            success: false,
+            error: true,
         })
     }
 }

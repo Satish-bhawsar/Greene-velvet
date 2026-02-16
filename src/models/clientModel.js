@@ -95,7 +95,8 @@ const ClientSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
-
+    
+    
     /* ================= RELATIONS (REFERENCES) ================= */
     bookings: [
         {
