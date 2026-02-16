@@ -33,7 +33,7 @@ const ClientSchema = new mongoose.Schema({
 
     role: {
         type: String,
-        default: "CLIENT"
+        default: "Client"
     },
 
     /* ================= DOCUMENT VERIFICATION ================= */

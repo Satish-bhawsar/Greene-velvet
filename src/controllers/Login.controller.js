@@ -56,7 +56,7 @@ export async function loginUsercontroller(request, response) {
         // 🎫 Token (custom IDs only)
         const token = jwt.sign(
             {
-                userId: role === "Escort" ? user.escortId : user.clientId,
+                userId: role === "Escort" ? user.escortId : user.clientId ,
                 role: role
             },
             process.env.JWT_SECRET,
