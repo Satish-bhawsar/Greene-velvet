@@ -1,8 +1,6 @@
 import { Router } from "express";
-import upload from "../middleware/multer";
 
-import { protect } from "../middleware/auth";
-import { loginUsercontroller } from "../controllers/Login.controller";
+import { loginUsercontroller } from "../controllers/Login.controller.js";
 
 const loginRouter = Router()
 
