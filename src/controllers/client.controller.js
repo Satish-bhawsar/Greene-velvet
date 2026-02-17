@@ -2,6 +2,7 @@ import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import ClientModel from "../models/clientModel.js";
 import { generatedclientId } from "../utils/generatedId.js";
+import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
 
 // client register controll
 export async function registerClientcontroller(request, response) {
@@ -101,6 +102,7 @@ export async function logoutClientcontroller(request, response) {
     }
 }
 
+// fetch client details
 export async function fetchClientcontroller(request, response) {
     try {
         const { clientId } = request.query;
@@ -138,4 +140,64 @@ export async function fetchClientcontroller(request, response) {
             error: true
         })
     }
+}
+
+
+// upload Avatar
+export async function uploadAvatarcontroller(request, response) {
+    try {
+        const { clientId } = request.body;
+
+        if (!clientId) {
+            return response.status(400).json({
+                message: "clientId required",
+                success: false,
+                error: true
+            })
+        }
+
+        if (!request.files?.avatar) {
+            return response.status(401).json({
+                message: "avatar required",
+                success: false,
+                error: true
+            })
+        }
+
+        const avatarUpload = await uploadImageCloudinary(request.files.avatar[0], "profileImg/avatar");
+
+        const uploadClient = await ClientModel.findOneAndUpdate(
+            { clientId },
+            {
+                avatar: avatarUpload.secure_url,
+
+            },
+            { new: true }
+        );
+
+        if (!uploadClient) {
+            return response.status(404).json({
+                message: "Client not found",
+                success: false,
+                error: true
+            });
+        }
+
+        return response.status(200).json({
+            message: "avatar uploaded successfully",
+            success: true,
+            error: false,
+            data: {
+                avatar: avatarUpload.secure_url,
+            },
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+
 }

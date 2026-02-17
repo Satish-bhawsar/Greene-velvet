@@ -1,5 +1,5 @@
 import { request, response, Router } from "express";
-import { fetchClientcontroller, logoutClientcontroller, registerClientcontroller } from "../controllers/client.controller.js";
+import { fetchClientcontroller, logoutClientcontroller, registerClientcontroller, uploadAvatarcontroller } from "../controllers/client.controller.js";
 import { protect } from "../middleware/auth.js";
 
 const clientRouter = Router()
@@ -12,5 +12,6 @@ clientRouter.get("/client-data", protect("Client"), async (request, res) => {
 });
 clientRouter.post("/logout",logoutClientcontroller);
 clientRouter.get("/fetch-client-details",fetchClientcontroller);
+clientRouter.patch("/upload-avatar", upload.fields([ { name: "avatar", maxCount: 1 }]),  uploadAvatarcontroller)
 
 export default clientRouter
