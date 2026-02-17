@@ -100,3 +100,42 @@ export async function logoutClientcontroller(request, response) {
         })
     }
 }
+
+export async function fetchClientcontroller(request, response) {
+    try {
+        const { clientId } = request.query;
+
+        if (!clientId) {
+            return response.status(400).json({
+                message: "provide clientId",
+                success: false,
+                error: true
+            })
+        }
+
+        const clientDetails = await ClientModel.findOne({ clientId })
+
+        if (clientDetails.length === 0) {
+            return response.status(400).json({
+                message: "client not found",
+                success: false,
+                error: true
+            })
+        }
+
+
+        return response.status(200).json({
+            message: "fetched success",
+            success: true,
+            error: false,
+            data: clientDetails
+        })
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            success: false,
+            error: true
+        })
+    }
+}
