@@ -11,7 +11,7 @@ const ClientSchema = new mongoose.Schema({
     name: {
         type: String,
         required: [true, "Provide name"],
-        trim : true
+        trim: true
     },
     email: {
         type: String,
@@ -95,8 +95,8 @@ const ClientSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
-    
-    
+
+
     /* ================= RELATIONS (REFERENCES) ================= */
     bookings: [
         {
@@ -144,7 +144,31 @@ const ClientSchema = new mongoose.Schema({
         default: ""
     },
 
+    /* ================< new update >====================== */
+    totalBookings: {
+        type: Number,
+        default: 0,
 
+    },
+    givenReviews: {
+        type: Number,
+        default: 0,
+    },
+    walletBalance: {
+        type: Number,
+        default: 0,
+        min: 0 // Balance negative mein nahi jana chahiye
+    },
+    favorites: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Escort'
+        }
+    ],
+    recentViews: [{
+        escortId: { type: mongoose.Schema.Types.ObjectId, ref: 'Escort' },
+        viewedAt: { type: Date, default: Date.now }
+    }],
 
 }, {
     timestamps: true
