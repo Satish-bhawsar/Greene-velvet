@@ -1,6 +1,7 @@
 import { request, response, Router } from "express";
 import { fetchClientcontroller, logoutClientcontroller, registerClientcontroller, uploadAvatarcontroller } from "../controllers/client.controller.js";
 import { protect } from "../middleware/auth.js";
+import upload from "../middleware/multer.js";
 
 const clientRouter = Router()
 
