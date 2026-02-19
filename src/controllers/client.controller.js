@@ -142,7 +142,6 @@ export async function fetchClientcontroller(request, response) {
     }
 }
 
-
 // upload Avatar
 export async function uploadAvatarcontroller(request, response) {
     try {
