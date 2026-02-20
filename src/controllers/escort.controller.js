@@ -577,7 +577,7 @@ export async function logoutEscortcontroller(request, response) {
 
 
         const escort = await EscortModel.findOne({ escortId: escortId });
-        
+
         if (!escort) {
             return response.status(404).json({
                 message: "escort not found",
@@ -880,6 +880,7 @@ export async function verifiedEscortcontroller(request, response) {
     }
 }
 
+// ------------------x-x-x-x-x-< Not completed >-x-x-x-x-x--------------------
 export async function updateEscortcontroller(request, response) {
     try {
         const escortId = request.user._id
@@ -945,6 +946,7 @@ export async function updateHighlightscontroller(request, response) {
     }
 }
 
+// escort services
 export async function escortServicescontroller(request, response) {
     try {
         const { escortId, title, label, price, description, isActive } = request.body;
@@ -990,6 +992,7 @@ export async function escortServicescontroller(request, response) {
     }
 }
 
+// escort rates
 export async function escortRatescontroller(request, response) {
     try {
         const { escortId, label, price, duration, isActive } = request.body;
@@ -1041,6 +1044,7 @@ export async function escortRatescontroller(request, response) {
     }
 }
 
+// fetch escorts added services  => not in use bcoz -> use populate and fetch rates and services
 export async function fetchescortServicescontroller(request, response) {
     try {
         const { escortId } = request.query;
@@ -1068,4 +1072,89 @@ export async function fetchescortServicescontroller(request, response) {
             error: true
         });
     }
+}
+
+// filter city escorts
+export async function fetchFiltercityescortscontroller(request, response) {
+  try {
+    let { filters } = request.query;
+
+    if (!filters) {
+      return response.status(400).json({
+        message: "filters required",
+        success: false,
+        error: true
+      });
+    }
+
+    if (typeof filters === "string") {
+      filters = JSON.parse(filters);
+    }
+
+    const query = {};
+
+    // normal direct filters
+    if (filters.city) query.city = filters.city;
+    if (filters.isVerified === true) query.isVerified = true;
+    if (filters.incall === true) query.incall = true;
+    if (filters.outcall === true) query.outcall = true;
+    if (filters.fmt === true) query.fmt = true;
+
+    if (filters.gender) query.gender = filters.gender;
+    if (filters.adverties_category) query.adverties_category = filters.adverties_category;
+    if (filters.account_type) query.account_type = filters.account_type;
+    if (filters.for) query.for = filters.for;
+
+    if (filters.ethnicity && filters.ethnicity !== "Any")
+      query.ethnicity = filters.ethnicity;
+
+    if (filters.bustSize && filters.bustSize !== "Any")
+      query.bustSize = filters.bustSize;
+
+    if (filters.hairColor && filters.hairColor !== "Any")
+      query.hairColor = filters.hairColor;
+
+    // ---------- AGE RANGE ----------
+    if (filters.age) {
+      if (filters.age.includes("-")) {
+        const [min, max] = filters.age.split("-").map(Number);
+        query.age = { $gte: min, $lte: max };
+      } else if (filters.age.includes("+")) {
+        const min = Number(filters.age.replace("+", ""));
+        query.age = { $gte: min };
+      }
+    }
+
+    // ---------- RATE RANGE ----------
+    if (filters.rateFrom) {
+      const minRate = Number(filters.rateFrom.replace("+", ""));
+      query.rateFrom = { $gte: minRate };
+    }
+
+    const escortList = await EscortModel.find(query)
+      .populate("escortdetail")
+      .populate("escortessential");
+
+    if (escortList.length === 0) {
+      return response.status(404).json({
+        message: "escorts not found",
+        success: false,
+        error: true
+      });
+    }
+
+    return response.status(200).json({
+      message: "filter city data",
+      data: escortList,
+      success: true,
+      error: false
+    });
+
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      success: false,
+      error: true
+    });
+  }
 }
