@@ -1142,22 +1142,10 @@ export async function fetchFiltercityescortscontroller(request, response) {
         console.log("Final Query:", query);
 
         // 🔹 Fetch escorts
-        const escortList = await EscortModel.find({ city: filters.city || undefined })
-            .populate({
-                path: "escortdetail",
-                match: filters.age ? buildAgeQuery(filters.age) : {}, // custom function age parse
-            })
-            .populate({
-                path: "escortessential",
-                match: {
-                    ...(filters.ethnicity &&
-                        filters.ethnicity.toLowerCase() !== "any" &&
-                        filters.ethnicity.toLowerCase() !== "mixed"
-                        ? { ethnicity: filters.ethnicity }
-                        : {}), ...(filters.bustSize && filters.bustSize.toLowerCase() !== "any" ? { bustSize: filters.bustSize } : {}),
-                    ...(filters.hairColor && filters.hairColor.toLowerCase() !== "any" ? { hairColor: filters.hairColor } : {}),
-                },
-            });
+        const escortList = await EscortModel.find(query)
+            .populate("escortdetail")
+            .populate("escortessential");
+
         console.log("Escort List:", escortList.length);
 
         if (escortList.length === 0) {
