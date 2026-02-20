@@ -29,7 +29,7 @@ escortRouter.patch("/update-highlights", updateHighlightscontroller)
 escortRouter.post("/add-services", escortServicescontroller)
 escortRouter.post("/add-rates", escortRatescontroller)
 
-escortRouter.get("filter-city-escorts", fetchFiltercityescortscontroller);
+escortRouter.get("/filter-city-escorts", fetchFiltercityescortscontroller);
 
 
 export default escortRouter;
