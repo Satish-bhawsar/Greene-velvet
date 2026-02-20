@@ -1108,8 +1108,13 @@ export async function fetchFiltercityescortscontroller(request, response) {
         if (filters.outcall === true) query.outcall = true;
         if (filters.fmt === true) query.fmt = true;
 
-        if (filters.gender) query.gender = filters.gender;
-        if (filters.adverties_category) query.adverties_category = filters.adverties_category;
+        if (filters.gender && filters.gender.toLowerCase() !== "all") {
+            query.gender = filters.gender;
+        }
+        if (filters.adverties_category && filters.adverties_category.toLowerCase() !== "any") {
+            query.adverties_category = filters.adverties_category;
+        }
+
         if (filters.account_type) query.account_type = filters.account_type;
         if (filters.for) query.for = filters.for;
 
@@ -1137,10 +1142,22 @@ export async function fetchFiltercityescortscontroller(request, response) {
         console.log("Final Query:", query);
 
         // 🔹 Fetch escorts
-        const escortList = await EscortModel.find(query)
-            .populate("escortdetail")
-            .populate("escortessential");
-
+        const escortList = await EscortModel.find({ city: filters.city || undefined })
+            .populate({
+                path: "escortdetail",
+                match: filters.age ? buildAgeQuery(filters.age) : {}, // custom function age parse
+            })
+            .populate({
+                path: "escortessential",
+                match: {
+                    ...(filters.ethnicity &&
+                        filters.ethnicity.toLowerCase() !== "any" &&
+                        filters.ethnicity.toLowerCase() !== "mixed"
+                        ? { ethnicity: filters.ethnicity }
+                        : {}), ...(filters.bustSize && filters.bustSize.toLowerCase() !== "any" ? { bustSize: filters.bustSize } : {}),
+                    ...(filters.hairColor && filters.hairColor.toLowerCase() !== "any" ? { hairColor: filters.hairColor } : {}),
+                },
+            });
         console.log("Escort List:", escortList.length);
 
         if (escortList.length === 0) {
