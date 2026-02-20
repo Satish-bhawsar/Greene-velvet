@@ -1078,6 +1078,11 @@ export async function fetchescortServicescontroller(request, response) {
 export async function fetchFiltercityescortscontroller(request, response) {
   try {
     let { filters } = request.query;
+     
+    console.log("test1 : ", filters);
+    console.log("test2 : ", request.query);
+
+
 
     if (!filters) {
       return response.status(400).json({
@@ -1090,6 +1095,8 @@ export async function fetchFiltercityescortscontroller(request, response) {
     if (typeof filters === "string") {
       filters = JSON.parse(filters);
     }
+
+    console.log("test3 :", filters);
 
     const query = {};
 
@@ -1131,9 +1138,13 @@ export async function fetchFiltercityescortscontroller(request, response) {
       query.rateFrom = { $gte: minRate };
     }
 
+    console.log("test4 query : ", query);
+
     const escortList = await EscortModel.find(query)
       .populate("escortdetail")
       .populate("escortessential");
+
+      console.log("test5 escortList: ", escortList);
 
     if (escortList.length === 0) {
       return response.status(404).json({
