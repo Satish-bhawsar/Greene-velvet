@@ -1075,21 +1075,22 @@ export async function fetchescortServicescontroller(request, response) {
 }
 
 // filter city escorts
+// filter city escorts
 export async function fetchFiltercityescortscontroller(request, response) {
     try {
         let filters = {};
 
-        // 🔹 Parse filters from query string
+        // 1. 🔹 Parse filters from query string (Handle nested filters[key] format)
         for (const key in request.query) {
             if (key.startsWith("filters[")) {
                 const actualKey = key.replace(/^filters\[(.*)\]$/, "$1");
                 let value = request.query[key];
 
-                // convert boolean strings to boolean
+                // Convert boolean strings to actual boolean
                 if (value === "true") value = true;
                 else if (value === "false") value = false;
 
-                // include only non-empty strings or true booleans
+                // Include only valid values
                 if (value !== "" && value !== null && value !== undefined) {
                     filters[actualKey] = value;
                 }
@@ -1098,35 +1099,14 @@ export async function fetchFiltercityescortscontroller(request, response) {
 
         console.log("Parsed Filters:", filters);
 
-        // 🔹 Build Mongoose query
+        // 2. 🔹 Build Main Query (for EscortModel fields)
         const query = {};
 
-        // Boolean / normal fields
-        if (filters.city) query.city = filters.city;
+        if (filters.city) query.city = filters.city; // Make sure this matches DB case or use Regex
         if (filters.isVerified === true) query.isVerified = true;
         if (filters.incall === true) query.incall = true;
         if (filters.outcall === true) query.outcall = true;
         if (filters.fmt === true) query.fmt = true;
-
-
-        // 🔹 GENDER (from escortdetail)
-        let genderMatch = {};
-
-        if (filters.gender) {
-            let genderArray = [];
-
-            if (typeof filters.gender === "string") {
-                // "male,female" => ["male","female"]
-                genderArray = filters.gender.split(",").map(g => g);
-            }
-
-            if (!genderArray.includes("all")) {
-                genderMatch = { gender: { $in: genderArray } };
-            }
-        }
-
-        console.log("Main Query:", query);
-        console.log("Gender Match:", genderMatch);
 
         if (filters.adverties_category && filters.adverties_category.toLowerCase() !== "any") {
             query.adverties_category = filters.adverties_category;
@@ -1134,12 +1114,11 @@ export async function fetchFiltercityescortscontroller(request, response) {
 
         if (filters.account_type) query.account_type = filters.account_type;
         if (filters.for) query.for = filters.for;
-
         if (filters.ethnicity) query.ethnicity = filters.ethnicity;
         if (filters.bustSize) query.bustSize = filters.bustSize;
         if (filters.hairColor) query.hairColor = filters.hairColor;
 
-        // ---------- AGE RANGE ----------
+        // AGE RANGE
         if (filters.age) {
             if (filters.age.includes("-")) {
                 const [min, max] = filters.age.split("-").map(Number);
@@ -1150,47 +1129,71 @@ export async function fetchFiltercityescortscontroller(request, response) {
             }
         }
 
-        // ---------- RATE RANGE ----------
+        // RATE RANGE
         if (filters.rateFrom) {
             const minRate = Number(filters.rateFrom.replace("+", ""));
             query.rateFrom = { $gte: minRate };
         }
 
-        console.log("Final Query:", query);
+        // 3. 🔹 GENDER Logic (Filter for linked 'escortdetail' model)
+        let genderMatch = {};
+        if (filters.gender) {
+            let genderArray = [];
+            
+            // Handle both string (comma separated) and array formats
+            if (typeof filters.gender === "string") {
+                genderArray = filters.gender.split(",").map(g => g.trim());
+            } else if (Array.isArray(filters.gender)) {
+                genderArray = filters.gender;
+            }
 
+            // If "all" is not selected, apply case-insensitive regex match
+            if (genderArray.length > 0 && !genderArray.includes("all")) {
+                genderMatch = { 
+                    gender: { 
+                        $in: genderArray.map(g => new RegExp(`^${g}$`, "i")) 
+                    } 
+                };
+            }
+        }
 
+        console.log("Main Query:", JSON.stringify(query));
+        console.log("Gender Match (escortdetail):", JSON.stringify(genderMatch));
 
-        // 🔹 Fetch escorts
+        // 4. 🔹 Fetch & Populate
         const escortList = await EscortModel.find(query)
             .populate({
                 path: "escortdetail",
-                match: genderMatch,
+                match: genderMatch, // Linked collection filtering
             })
             .populate("escortessential");
 
+        // 5. 🔹 Filter out results where linked 'escortdetail' didn't match the gender
+        // Because Mongoose 'match' returns the parent with escortdetail: null if no match found
         const filteredEscorts = escortList.filter(
             (e) => e.escortdetail !== null
         );
-        console.log("filteredEscorts List:", filteredEscorts.length);
+
+        console.log("Results found:", filteredEscorts.length);
 
         if (filteredEscorts.length === 0) {
             return response.status(404).json({
-                message: "No escorts found",
+                message: "No escorts found matching these filters",
                 success: false,
-                error: true,
+                data: []
             });
         }
 
         return response.status(200).json({
-            message: "Filtered escorts fetched",
+            message: "Filtered escorts fetched successfully",
             data: filteredEscorts,
-            success: true,
-            error: false,
+            success: true
         });
+
     } catch (error) {
-        console.error(error);
+        console.error("Filter Error:", error);
         return response.status(500).json({
-            message: error.message || error,
+            message: error.message || "Internal Server Error",
             success: false,
             error: true,
         });
