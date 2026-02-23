@@ -1081,18 +1081,28 @@ export async function fetchFiltercityescortscontroller(request, response) {
         let filters = {};
 
         // 1. 🔹 Parse filters from query string (Handle nested filters[key] format)
+        // 1. 🔹 Parse filters from query string (Improved for Arrays)
         for (const key in request.query) {
             if (key.startsWith("filters[")) {
-                const actualKey = key.replace(/^filters\[(.*)\]$/, "$1");
+                // Purana regex: /^filters\[(.*)\]$/  <-- Ye 'gender][0' de raha tha
+                // Naya logic: brackets ke andar ka pehla word nikaalna
+                const actualKey = key.split('[')[1].split(']')[0];
                 let value = request.query[key];
 
-                // Convert boolean strings to actual boolean
                 if (value === "true") value = true;
                 else if (value === "false") value = false;
 
-                // Include only valid values
                 if (value !== "" && value !== null && value !== undefined) {
-                    filters[actualKey] = value;
+                    // Agar key pehle se exist karti hai (like gender), toh array mein push karein
+                    if (filters[actualKey]) {
+                        if (Array.isArray(filters[actualKey])) {
+                            filters[actualKey].push(value);
+                        } else {
+                            filters[actualKey] = [filters[actualKey], value];
+                        }
+                    } else {
+                        filters[actualKey] = value;
+                    }
                 }
             }
         }
@@ -1102,7 +1112,10 @@ export async function fetchFiltercityescortscontroller(request, response) {
         // 2. 🔹 Build Main Query (for EscortModel fields)
         const query = {};
 
-        if (filters.city) query.city = filters.city; // Make sure this matches DB case or use Regex
+        // City query fix
+        if (filters.city) {
+            query.city = new RegExp(`^${filters.city}$`, "i");
+        }
         if (filters.isVerified === true) query.isVerified = true;
         if (filters.incall === true) query.incall = true;
         if (filters.outcall === true) query.outcall = true;
@@ -1139,7 +1152,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
         let genderMatch = {};
         if (filters.gender) {
             let genderArray = [];
-            
+
             // Handle both string (comma separated) and array formats
             if (typeof filters.gender === "string") {
                 genderArray = filters.gender.split(",").map(g => g.trim());
@@ -1149,10 +1162,10 @@ export async function fetchFiltercityescortscontroller(request, response) {
 
             // If "all" is not selected, apply case-insensitive regex match
             if (genderArray.length > 0 && !genderArray.includes("all")) {
-                genderMatch = { 
-                    gender: { 
-                        $in: genderArray.map(g => new RegExp(`^${g}$`, "i")) 
-                    } 
+                genderMatch = {
+                    gender: {
+                        $in: genderArray.map(g => new RegExp(`^${g}$`, "i"))
+                    }
                 };
             }
         }
