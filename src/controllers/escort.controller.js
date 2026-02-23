@@ -306,7 +306,7 @@ export async function verifyMobileotp(request, response) {
 // Escort add details controll
 export async function escortdetailscontroller(request, response) {
     try {
-        const { escortId, escortdetail, escortessential, escortprefer } = request.body;
+        const { escortId, ...restData } = request.body;
 
         if (!escortId) {
             return response.status(400).json({
@@ -316,39 +316,14 @@ export async function escortdetailscontroller(request, response) {
             })
         }
 
-        // ✅ Details
-        const detailsDoc = await EscortdetailsModel.findOneAndUpdate(
-            { escortId },
-            { $set: escortdetail },
-            { new: true, upsert: true }
-        );
-
-        // ✅ Essential
-        const essentialDoc = await EscortessentialModel.findOneAndUpdate(
-            { escortId },
-            { $set: escortessential },
-            { new: true, upsert: true }
-        );
-
-        // ✅ Prefer (array safe)
-        const preferDoc = await EscortpreferModel.findOneAndUpdate(
-            { escortId },
-            { $set: { escortprefer: escortprefer } }, // 👈 explicit
-            { new: true, upsert: true }
-        );
-
 
         // ✅ Link to main Escort table
         await EscortModel.findOneAndUpdate(
             { escortId },
-            {
-                $set: {
-                    escortdetail: detailsDoc._id,
-                    escortessential: essentialDoc._id,
-                    escortprefer: preferDoc._id,
-                }
-            }
+            { $set: restData },   // 👈 direct fields save
+            { new: true, upsert: true }
         );
+
 
         return response.status(200).json({
             message: "Details saved ",
