@@ -1110,7 +1110,9 @@ export async function fetchFiltercityescortscontroller(request, response) {
         if (filters.fmt === true) query.fmt = true;
 
 
-        // 🔹 GENDER (from escortdetail) — UPDATED
+
+        // 🔹 FIX GENDER FROM BROKEN KEYS
+        // 🔹 GENDER (from escortdetail)
         let genderMatch = {};
 
         // 🔹 FIX GENDER FROM BROKEN KEYS
@@ -1120,7 +1122,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
             for (const key in filters) {
                 if (key.startsWith("gender]")) {
                     genderValues.push(filters[key]);
-                    delete filters[key]; // clean wrong keys
+                    delete filters[key];
                 }
             }
 
@@ -1129,6 +1131,20 @@ export async function fetchFiltercityescortscontroller(request, response) {
             }
         }
 
+        // ✅ APPLY GENDER FILTER
+        if (filters.gender) {
+            let genderArray = [];
+
+            if (typeof filters.gender === "string") {
+                genderArray = filters.gender.split(",").map(g => g.trim()).filter(Boolean);
+            } else if (Array.isArray(filters.gender)) {
+                genderArray = filters.gender.map(g => g.trim()).filter(Boolean);
+            }
+
+            if (genderArray.length > 0 && !genderArray.includes("all")) {
+                genderMatch = { gender: { $in: genderArray } };
+            }
+        }
         console.log("Main Query:", query);
         console.log("Gender Match:", genderMatch);
 
@@ -1142,12 +1158,19 @@ export async function fetchFiltercityescortscontroller(request, response) {
         if (filters.for && filters.for.toLowerCase() !== "anyone")
             query.for = filters.for;
 
-        if (filters.ethnicity && filters.ethnicity.toLowerCase() !== "any")
-            query.ethnicity = filters.ethnicity;
+        if (filters.ethnicity && filters.ethnicity.toLowerCase() !== "any") {
+            essentialMatch.ethnicity = {
+                $regex: `^${filters.ethnicity}$`,
+                $options: "i"
+            };
+        }
 
-        if (filters.bustSize && filters.bustSize.toLowerCase() !== "any")
-            query.bustSize = filters.bustSize;
-
+        if (filters.bustSize && filters.bustSize.toLowerCase() !== "any") {
+            essentialMatch.bustSize = {
+                $regex: `^${filters.bustSize}$`,
+                $options: "i"
+            };
+        }
         if (filters.hairColor && filters.hairColor.toLowerCase() !== "any") {
             essentialMatch.hairColor = {
                 $regex: `^${filters.hairColor}$`,
@@ -1155,7 +1178,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
             };
         }
 
-        
+
         // ---------- AGE RANGE ----------
         if (filters.age) {
             if (filters.age.includes("-")) {
@@ -1187,9 +1210,17 @@ export async function fetchFiltercityescortscontroller(request, response) {
                 match: essentialMatch,
             })
 
-        const filteredEscorts = escortList.filter(
-            (e) => e.escortdetail !== null && e.escortessential !== null
-        );
+        const filteredEscorts = escortList.filter((e) => {
+            if (Object.keys(genderMatch).length > 0 && e.escortdetail === null) {
+                return false;
+            }
+
+            if (Object.keys(essentialMatch).length > 0 && e.escortessential === null) {
+                return false;
+            }
+
+            return true;
+        });
 
         console.log("filteredEscorts List:", filteredEscorts.length);
 
