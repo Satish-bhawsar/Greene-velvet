@@ -1078,7 +1078,6 @@ export async function fetchescortServicescontroller(request, response) {
 export async function fetchFiltercityescortscontroller(request, response) {
     try {
         let filters = {};
-        let genderFilter = null;
 
         // 🔹 Parse filters from query string
         for (const key in request.query) {
@@ -1110,17 +1109,24 @@ export async function fetchFiltercityescortscontroller(request, response) {
         if (filters.fmt === true) query.fmt = true;
 
 
+        // 🔹 GENDER (from escortdetail)
+        let genderMatch = {};
+
         if (filters.gender) {
-            if (Array.isArray(filters.gender)) {
-                if (!filters.gender.includes("all")) {
-                    genderFilter = { gender: { $in: filters.gender } };
-                }
-            } else if (typeof filters.gender === "string") {
-                if (filters.gender.toLowerCase() !== "all") {
-                    genderFilter = { gender: filters.gender };
-                }
+            let genderArray = [];
+
+            if (typeof filters.gender === "string") {
+                // "male,female" => ["male","female"]
+                genderArray = filters.gender.split(",").map(g => g.toLowerCase());
+            }
+
+            if (!genderArray.includes("all")) {
+                genderMatch = { gender: { $in: genderArray } };
             }
         }
+
+        console.log("Main Query:", query);
+        console.log("Gender Match:", genderMatch);
 
         if (filters.adverties_category && filters.adverties_category.toLowerCase() !== "any") {
             query.adverties_category = filters.adverties_category;
@@ -1158,7 +1164,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
         const escortList = await EscortModel.find(query)
             .populate({
                 path: "escortdetail",
-                match: genderFilter ? genderFilter : {},
+                match: genderMatch,
             })
             .populate("escortessential");
 
