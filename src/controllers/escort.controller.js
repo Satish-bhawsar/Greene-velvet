@@ -1080,7 +1080,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
     try {
         let filters = {};
 
-        // 1. 🔹 Sabse Pehle: Parsing ko robust banaya (gender][0 handle karne ke liye)
+        // 1. 🔹 Robust Parsing (Fixes the 'gender][0' issue)
         for (const key in request.query) {
             if (key.startsWith("filters[")) {
                 const actualKey = key.split('[')[1].split(']')[0];
@@ -1103,57 +1103,35 @@ export async function fetchFiltercityescortscontroller(request, response) {
 
         const query = {};
 
-        // 2. 🔹 City Filter: Isse "ADELAIDE" aur "Adelaide" dono milenge
+        // City match (Regex for case-insensitivity)
         if (filters.city) {
             query.city = { $regex: new RegExp(`^${filters.city}$`, "i") };
         }
 
-        // 3. 🔹 Boolean Logic: Agar 'false' hai toh filter mat lagao (default behavior)
-        if (filters.isVerified === true) query.isVerified = true;
-        if (filters.incall === true) query.incall = true;
-        if (filters.outcall === true) query.outcall = true;
-        if (filters.fmt === true) query.fmt = true;
+        // Boolean filters (Sirf tabhi apply honge jab true honge)
+        if (filters.isVerified) query.isVerified = true;
+        if (filters.incall) query.incall = true;
+        if (filters.outcall) query.outcall = true;
 
-        // 4. 🔹 String Matchings
-        if (filters.adverties_category && filters.adverties_category.toLowerCase() !== "any") {
-            query.adverties_category = filters.adverties_category;
-        }
-        if (filters.account_type) query.account_type = filters.account_type;
-        if (filters.ethnicity) query.ethnicity = filters.ethnicity;
-        if (filters.bustSize) query.bustSize = filters.bustSize;
-        if (filters.hairColor) query.hairColor = filters.hairColor;
-
-        // 5. 🔹 Age & Rate Range
-        if (filters.age) {
-            const ageStr = String(filters.age);
-            if (ageStr.includes("-")) {
-                const [min, max] = ageStr.split("-").map(Number);
-                query.age = { $gte: min, $lte: max };
-            } else if (ageStr.includes("+")) {
-                query.age = { $gte: Number(ageStr.replace("+", "")) };
-            }
-        }
-
-        if (filters.rateFrom) {
-            query.rateFrom = { $gte: Number(String(filters.rateFrom).replace("+", "")) };
-        }
-
-        // 6. 🔹 Gender Logic (From linked collection 'escortdetail')
+        // 2. 🔹 GENDER MASTER LOGIC (The "Maza" is here)
         let genderMatch = {};
         if (filters.gender) {
             let gArray = Array.isArray(filters.gender) ? filters.gender : [filters.gender];
-            // 'all' ko ignore karo
-            gArray = gArray.filter(g => g.toLowerCase() !== "all");
 
-            if (gArray.length > 0) {
-                // Regex 'i' flag lagaya taki Male/male dono match ho jayein
+            // Step A: "All" handle karo
+            const hasAll = gArray.some(g => String(g).toLowerCase() === 'all');
+
+            if (!hasAll && gArray.length > 0) {
+                // Step B: User choices handle karo (Male, Female, Transgender combinations)
                 genderMatch = {
-                    gender: { $in: gArray.map(g => new RegExp(`^${g}$`, "i")) }
+                    gender: {
+                        $in: gArray.map(g => new RegExp(`^${g}$`, "i"))
+                    }
                 };
             }
         }
 
-        // 7. 🔹 DB Search
+        // 3. 🔹 Execute Database Query
         const escortList = await EscortModel.find(query)
             .populate({
                 path: "escortdetail",
@@ -1161,8 +1139,11 @@ export async function fetchFiltercityescortscontroller(request, response) {
             })
             .populate("escortessential");
 
-        // 8. 🔹 Final Filtering: Unhe nikalo jinka gender match nahi hua
+        // 4. 🔹 Final Filter: Unhe hatao jinka detail match nahi hua
         const finalData = escortList.filter(e => e.escortdetail !== null);
+
+        console.log("Filters Used:", filters.gender);
+        console.log("Total Found:", finalData.length);
 
         return response.status(200).json({
             success: true,
