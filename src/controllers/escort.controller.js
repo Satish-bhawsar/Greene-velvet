@@ -1108,28 +1108,31 @@ export async function fetchFiltercityescortscontroller(request, response) {
         if (filters.outcall === true) query.outcall = true;
         if (filters.fmt === true) query.fmt = true;
 
-        // 🔹 GENDER (from escortdetail) — FIXED
+
+        // 🔹 GENDER (from escortdetail) — UPDATED
         let genderMatch = {};
 
         if (filters.gender) {
             let genderArray = [];
 
             if (typeof filters.gender === "string") {
-                // "Male,Female,Transgender" => ["Male", "Female", "Transgender"]
+                // "Male,Female" => ["Male","Female"]
                 genderArray = filters.gender
                     .split(",")
-                    .map((g) => g.trim())
+                    .map(g => g.trim())
                     .filter(Boolean);
             } else if (Array.isArray(filters.gender)) {
-                genderArray = filters.gender.map((g) => g.trim()).filter(Boolean);
+                genderArray = filters.gender
+                    .map(g => g.trim())
+                    .filter(Boolean);
             }
 
-            // Only apply match if not "all" and array has values
+            // ✅ apply only if not "all"
             if (genderArray.length > 0 && !genderArray.includes("all")) {
                 genderMatch = { gender: { $in: genderArray } };
             }
+            // ❌ if ["all"] => genderMatch = {} (ignore filter)
         }
-
         console.log("Main Query:", query);
         console.log("Gender Match:", genderMatch);
 
