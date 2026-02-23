@@ -1078,6 +1078,7 @@ export async function fetchescortServicescontroller(request, response) {
 export async function fetchFiltercityescortscontroller(request, response) {
     try {
         let filters = {};
+        let essentialMatch = {};
 
         // 🔹 Parse filters from query string
         for (const key in request.query) {
@@ -1169,18 +1170,25 @@ export async function fetchFiltercityescortscontroller(request, response) {
 
         console.log("Final Query:", query);
 
+
         // 🔹 Fetch escorts
         const escortList = await EscortModel.find(query)
             .populate({
                 path: "escortdetail",
                 match: genderMatch,
             })
-            .populate("escortessential");
+            .populate({
+                path: "escortessential",
+                match: essentialMatch,
+            })
 
         const filteredEscorts = escortList.filter(
-            (e) => e.escortdetail !== null
+            (e) => e.escortdetail !== null && e.escortessential !== null
         );
+
         console.log("filteredEscorts List:", filteredEscorts.length);
+
+
 
         if (filteredEscorts.length === 0) {
             return response.status(404).json({
