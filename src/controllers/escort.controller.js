@@ -1148,9 +1148,14 @@ export async function fetchFiltercityescortscontroller(request, response) {
         if (filters.bustSize && filters.bustSize.toLowerCase() !== "any")
             query.bustSize = filters.bustSize;
 
-        if (filters.hairColor && filters.hairColor.toLowerCase() !== "any")
-            query.hairColor = filters.hairColor;
+        if (filters.hairColor && filters.hairColor.toLowerCase() !== "any") {
+            essentialMatch.hairColor = {
+                $regex: `^${filters.hairColor}$`,
+                $options: "i"   // case insensitive
+            };
+        }
 
+        
         // ---------- AGE RANGE ----------
         if (filters.age) {
             if (filters.age.includes("-")) {
@@ -1178,7 +1183,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
                 match: genderMatch,
             })
             .populate({
-                path: "escortessentials",
+                path: "escortessential",
                 match: essentialMatch,
             })
 
