@@ -1051,110 +1051,110 @@ export async function fetchescortServicescontroller(request, response) {
 
 // filter city escorts
 export async function fetchFiltercityescortscontroller(request, response) {
-  try {
-    let filters = {};
+    try {
+        let filters = {};
 
-    // 🔹 Parse filters
-    for (const key in request.query) {
-      if (key.startsWith("filters[")) {
-        const actualKey = key.replace(/^filters\[(.*)\]$/, "$1");
-        let value = request.query[key];
+        // 🔹 Parse filters
+        for (const key in request.query) {
+            if (key.startsWith("filters[")) {
+                const actualKey = key.replace(/^filters\[(.*)\]$/, "$1");
+                let value = request.query[key];
 
-        if (value === "true") value = true;
-        else if (value === "false") value = false;
+                if (value === "true") value = true;
+                else if (value === "false") value = false;
 
-        if (value !== "" && value !== null && value !== undefined) {
-          filters[actualKey] = value;
+                if (value !== "" && value !== null && value !== undefined) {
+                    filters[actualKey] = value;
+                }
+            }
         }
-      }
+
+        console.log("Parsed Filters:", filters);
+
+        // 🔹 Build query (ONLY EscortModel fields)
+        const query = {};
+
+        if (filters.city) query.city = filters.city;
+        if (filters.isVerified === true) query.isVerified = true;
+        if (filters.incall === true) query.incall = true;
+        if (filters.outcall === true) query.outcall = true;
+        if (filters.fmt === true) query.fmt = true;
+
+        if (filters.adverties_category && filters.adverties_category !== "Any") {
+            query.adverties_category = filters.adverties_category;
+        }
+
+        if (filters.account_type && filters.account_type !== "All") {
+            query.account_type = filters.account_type;
+        }
+
+        if (filters.for && filters.for !== "Anyone") {
+            query.for = filters.for;
+        }
+
+        // ✅ GENDER (single value in DB)
+        if (filters.gender && filters.gender !== "All") {
+            query.gender = filters.gender;   // Male / Female / Transgender
+        }
+
+        // ✅ OTHER FIELDS (same model)
+        if (filters.ethnicity && filters.ethnicity !== "Any") {
+            query.ethnicity = filters.ethnicity;
+        }
+
+        if (filters.bustSize && filters.bustSize !== "Any") {
+            query.bustSize = filters.bustSize;
+        }
+
+        if (filters.hairColor && filters.hairColor !== "Any") {
+            query.hairColor = filters.hairColor;
+        }
+
+        // ---------- AGE RANGE ----------
+        if (filters.age) {
+            if (filters.age.includes("-")) {
+                const [min, max] = filters.age.split("-").map(Number);
+                query.age = { $gte: min, $lte: max };
+            } else if (filters.age.includes("+")) {
+                const min = Number(filters.age.replace("+", ""));
+                query.age = { $gte: min };
+            }
+        }
+
+        // ---------- RATE RANGE ----------
+        if (filters.rateFrom) {
+            const minRate = Number(filters.rateFrom.replace("+", ""));
+            query.rateFrom = { $gte: minRate };
+        }
+
+        console.log("FINAL QUERY:", query);
+
+        // 🔹 Fetch escorts (NO populate)
+        const escortList = await EscortModel.find(query);
+
+        console.log("Result count:", escortList.length);
+
+        if (escortList.length === 0) {
+            return response.status(404).json({
+                message: "No escorts found",
+                success: false,
+                error: true,
+            });
+        }
+
+        return response.status(200).json({
+            message: "Filtered escorts fetched",
+            data: escortList,
+            success: true,
+            error: false,
+        });
+
+    } catch (error) {
+        console.error(error);
+        return response.status(500).json({
+            message: error.message || error,
+            success: false,
+            error: true,
+        });
     }
-
-    console.log("Parsed Filters:", filters);
-
-    // 🔹 Build query (ONLY EscortModel fields)
-    const query = {};
-
-    if (filters.city) query.city = filters.city;
-    if (filters.isVerified === true) query.isVerified = true;
-    if (filters.incall === true) query.incall = true;
-    if (filters.outcall === true) query.outcall = true;
-    if (filters.fmt === true) query.fmt = true;
-
-    if (filters.adverties_category && filters.adverties_category.toLovercase() !== "any") {
-      query.adverties_category = filters.adverties_category;
-    }
-
-    if (filters.account_type && filters.account_type.toLovercase() !== "all") {
-      query.account_type = filters.account_type;
-    }
-
-    if (filters.for && filters.for.toLovercase() !== "anyone") {
-      query.escortFor = filters.for;
-    }
-
-    // ✅ GENDER (single value in DB)
-    if (filters.gender && filters.gender.toLovercase() !== "all") {
-      query.gender = filters.gender;   // Male / Female / Transgender
-    }
-
-    // ✅ OTHER FIELDS (same model)
-    if (filters.ethnicity && filters.ethnicity.toLovercase() !== "any") {
-      query.ethnicity = filters.ethnicity;
-    }
-
-    if (filters.bustSize && filters.bustSize.toLovercase() !== "any") {
-      query.bustSize = filters.bustSize;
-    }
-
-    if (filters.hairColor && filters.hairColor.toLovercase() !== "any") {
-      query.hairColor = filters.hairColor;
-    }
-
-    // ---------- AGE RANGE ----------
-    if (filters.age) {
-      if (filters.age.includes("-")) {
-        const [min, max] = filters.age.split("-").map(Number);
-        query.age = { $gte: min, $lte: max };
-      } else if (filters.age.includes("+")) {
-        const min = Number(filters.age.replace("+", ""));
-        query.age = { $gte: min };
-      }
-    }
-
-    // ---------- RATE RANGE ----------
-    if (filters.rateFrom) {
-      const minRate = Number(filters.rateFrom.replace("+", ""));
-      query.rateFrom = { $gte: minRate };
-    }
-
-    console.log("FINAL QUERY:", query);
-
-    // 🔹 Fetch escorts (NO populate)
-    const escortList = await EscortModel.find(query);
-
-    console.log("Result count:", escortList.length);
-
-    if (escortList.length === 0) {
-      return response.status(404).json({
-        message: "No escorts found",
-        success: false,
-        error: true,
-      });
-    }
-
-    return response.status(200).json({
-      message: "Filtered escorts fetched",
-      data: escortList,
-      success: true,
-      error: false,
-    });
-
-  } catch (error) {
-    console.error(error);
-    return response.status(500).json({
-      message: error.message || error,
-      success: false,
-      error: true,
-    });
-  }
 }
