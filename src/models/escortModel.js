@@ -390,7 +390,22 @@ const EscortSchema = new mongoose.Schema({
 
     // ======================< pefer >========================
 
-    escortprefer: { type: [String], default: [] }
+    preferData: {
+        type: [String],
+        default: []
+    },
+
+    // =====================< filetr >==========================
+
+    escortFor: {
+        type: String,
+        default: "",
+    },
+
+    infmty: {
+        type: Boolean,
+        default: false,
+    },
 
 
 }, {
