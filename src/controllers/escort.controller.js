@@ -1076,62 +1076,93 @@ export async function fetchescortServicescontroller(request, response) {
 
 // filter city escorts
 // filter city escorts
+// filter city escorts
 export async function fetchFiltercityescortscontroller(request, response) {
     try {
         let filters = {};
 
-        // 1. 🔹 Robust Parsing (Fixes the 'gender][0' issue)
+        // 🔹 Parse filters from query string
         for (const key in request.query) {
             if (key.startsWith("filters[")) {
-                const actualKey = key.split('[')[1].split(']')[0];
+                const actualKey = key.replace(/^filters\[(.*)\]$/, "$1");
                 let value = request.query[key];
 
+                // convert boolean strings to boolean
                 if (value === "true") value = true;
                 else if (value === "false") value = false;
 
+                // include only non-empty strings or true booleans
                 if (value !== "" && value !== null && value !== undefined) {
-                    if (filters[actualKey]) {
-                        filters[actualKey] = Array.isArray(filters[actualKey])
-                            ? [...filters[actualKey], value]
-                            : [filters[actualKey], value];
-                    } else {
-                        filters[actualKey] = value;
-                    }
+                    filters[actualKey] = value;
                 }
             }
         }
 
+        console.log("Parsed Filters:", filters);
+
+        // 🔹 Build Mongoose query
         const query = {};
 
-        // City match (Regex for case-insensitivity)
-        if (filters.city) {
-            query.city = { $regex: new RegExp(`^${filters.city}$`, "i") };
-        }
+        // Boolean / normal fields
+        if (filters.city) query.city = filters.city;
+        if (filters.isVerified === true) query.isVerified = true;
+        if (filters.incall === true) query.incall = true;
+        if (filters.outcall === true) query.outcall = true;
+        if (filters.fmt === true) query.fmt = true;
 
-        // Boolean filters (Sirf tabhi apply honge jab true honge)
-        if (filters.isVerified) query.isVerified = true;
-        if (filters.incall) query.incall = true;
-        if (filters.outcall) query.outcall = true;
 
-        // 2. 🔹 GENDER MASTER LOGIC (The "Maza" is here)
+        // 🔹 GENDER (from escortdetail)
         let genderMatch = {};
+
         if (filters.gender) {
-            let gArray = Array.isArray(filters.gender) ? filters.gender : [filters.gender];
+            let genderArray = [];
 
-            // Step A: "All" handle karo
-            const hasAll = gArray.some(g => String(g).toLowerCase() === 'all');
+            if (typeof filters.gender === "string") {
+                // "male,female" => ["male","female"]
+                genderArray = filters.gender.split(",").map(g => g);
+            }
 
-            if (!hasAll && gArray.length > 0) {
-                // Step B: User choices handle karo (Male, Female, Transgender combinations)
-                genderMatch = {
-                    gender: {
-                        $in: gArray.map(g => new RegExp(`^${g}$`, "i"))
-                    }
-                };
+            if (!genderArray.includes("all")) {
+                genderMatch = { gender: { $in: genderArray } };
             }
         }
 
-        // 3. 🔹 Execute Database Query
+        console.log("Main Query:", query);
+        console.log("Gender Match:", genderMatch);
+
+        if (filters.adverties_category && filters.adverties_category.toLowerCase() !== "any") {
+            query.adverties_category = filters.adverties_category;
+        }
+
+        if (filters.account_type) query.account_type = filters.account_type;
+        if (filters.for) query.for = filters.for;
+
+        if (filters.ethnicity) query.ethnicity = filters.ethnicity;
+        if (filters.bustSize) query.bustSize = filters.bustSize;
+        if (filters.hairColor) query.hairColor = filters.hairColor;
+
+        // ---------- AGE RANGE ----------
+        if (filters.age) {
+            if (filters.age.includes("-")) {
+                const [min, max] = filters.age.split("-").map(Number);
+                query.age = { $gte: min, $lte: max };
+            } else if (filters.age.includes("+")) {
+                const min = Number(filters.age.replace("+", ""));
+                query.age = { $gte: min };
+            }
+        }
+
+        // ---------- RATE RANGE ----------
+        if (filters.rateFrom) {
+            const minRate = Number(filters.rateFrom.replace("+", ""));
+            query.rateFrom = { $gte: minRate };
+        }
+
+        console.log("Final Query:", query);
+
+
+
+        // 🔹 Fetch escorts
         const escortList = await EscortModel.find(query)
             .populate({
                 path: "escortdetail",
@@ -1139,20 +1170,31 @@ export async function fetchFiltercityescortscontroller(request, response) {
             })
             .populate("escortessential");
 
-        // 4. 🔹 Final Filter: Unhe hatao jinka detail match nahi hua
-        const finalData = escortList.filter(e => e.escortdetail !== null);
+        const filteredEscorts = escortList.filter(
+            (e) => e.escortdetail !== null
+        );
+        console.log("filteredEscorts List:", filteredEscorts.length);
 
-        console.log("Filters Used:", filters.gender);
-        console.log("Total Found:", finalData.length);
+        if (filteredEscorts.length === 0) {
+            return response.status(404).json({
+                message: "No escorts found",
+                success: false,
+                error: true,
+            });
+        }
 
         return response.status(200).json({
+            message: "Filtered escorts fetched",
+            data: filteredEscorts,
             success: true,
-            count: finalData.length,
-            data: finalData
+            error: false,
         });
-
     } catch (error) {
-        console.error("Filter Error:", error);
-        return response.status(500).json({ success: false, message: error.message });
+        console.error(error);
+        return response.status(500).json({
+            message: error.message || error,
+            success: false,
+            error: true,
+        });
     }
 }
