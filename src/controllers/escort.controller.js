@@ -1112,27 +1112,22 @@ export async function fetchFiltercityescortscontroller(request, response) {
         // 🔹 GENDER (from escortdetail) — UPDATED
         let genderMatch = {};
 
-        if (filters.gender) {
-            let genderArray = [];
+        // 🔹 FIX GENDER FROM BROKEN KEYS
+        if (!filters.gender) {
+            const genderValues = [];
 
-            if (typeof filters.gender === "string") {
-                // "Male,Female" => ["Male","Female"]
-                genderArray = filters.gender
-                    .split(",")
-                    .map(g => g.trim())
-                    .filter(Boolean);
-            } else if (Array.isArray(filters.gender)) {
-                genderArray = filters.gender
-                    .map(g => g.trim())
-                    .filter(Boolean);
+            for (const key in filters) {
+                if (key.startsWith("gender]")) {
+                    genderValues.push(filters[key]);
+                    delete filters[key]; // clean wrong keys
+                }
             }
 
-            // ✅ apply only if not "all"
-            if (genderArray.length > 0 && !genderArray.includes("all")) {
-                genderMatch = { gender: { $in: genderArray } };
+            if (genderValues.length > 0) {
+                filters.gender = genderValues;
             }
-            // ❌ if ["all"] => genderMatch = {} (ignore filter)
         }
+
         console.log("Main Query:", query);
         console.log("Gender Match:", genderMatch);
 
