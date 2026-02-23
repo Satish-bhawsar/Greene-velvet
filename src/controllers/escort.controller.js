@@ -1075,8 +1075,6 @@ export async function fetchescortServicescontroller(request, response) {
 }
 
 // filter city escorts
-// filter city escorts
-// filter city escorts
 export async function fetchFiltercityescortscontroller(request, response) {
     try {
         let filters = {};
@@ -1110,19 +1108,24 @@ export async function fetchFiltercityescortscontroller(request, response) {
         if (filters.outcall === true) query.outcall = true;
         if (filters.fmt === true) query.fmt = true;
 
-
-        // 🔹 GENDER (from escortdetail)
+        // 🔹 GENDER (from escortdetail) — FIXED
         let genderMatch = {};
 
         if (filters.gender) {
             let genderArray = [];
 
             if (typeof filters.gender === "string") {
-                // "male,female" => ["male","female"]
-                genderArray = filters.gender.split(",").map(g => g);
+                // "Male,Female,Transgender" => ["Male", "Female", "Transgender"]
+                genderArray = filters.gender
+                    .split(",")
+                    .map((g) => g.trim())
+                    .filter(Boolean);
+            } else if (Array.isArray(filters.gender)) {
+                genderArray = filters.gender.map((g) => g.trim()).filter(Boolean);
             }
 
-            if (!genderArray.includes("all")) {
+            // Only apply match if not "all" and array has values
+            if (genderArray.length > 0 && !genderArray.includes("all")) {
                 genderMatch = { gender: { $in: genderArray } };
             }
         }
@@ -1134,12 +1137,20 @@ export async function fetchFiltercityescortscontroller(request, response) {
             query.adverties_category = filters.adverties_category;
         }
 
-        if (filters.account_type) query.account_type = filters.account_type;
-        if (filters.for) query.for = filters.for;
+        if (filters.account_type && filters.account_type.toLowerCase() !== "all")
+            query.account_type = filters.account_type;
 
-        if (filters.ethnicity) query.ethnicity = filters.ethnicity;
-        if (filters.bustSize) query.bustSize = filters.bustSize;
-        if (filters.hairColor) query.hairColor = filters.hairColor;
+        if (filters.for && filters.for.toLowerCase() !== "anyone")
+            query.for = filters.for;
+
+        if (filters.ethnicity && filters.ethnicity.toLowerCase() !== "any")
+            query.ethnicity = filters.ethnicity;
+
+        if (filters.bustSize && filters.bustSize.toLowerCase() !== "any")
+            query.bustSize = filters.bustSize;
+
+        if (filters.hairColor && filters.hairColor.toLowerCase() !== "any")
+            query.hairColor = filters.hairColor;
 
         // ---------- AGE RANGE ----------
         if (filters.age) {
@@ -1159,8 +1170,6 @@ export async function fetchFiltercityescortscontroller(request, response) {
         }
 
         console.log("Final Query:", query);
-
-
 
         // 🔹 Fetch escorts
         const escortList = await EscortModel.find(query)
