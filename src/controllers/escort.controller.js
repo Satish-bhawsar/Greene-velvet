@@ -1080,33 +1080,33 @@ export async function fetchFiltercityescortscontroller(request, response) {
     if (filters.outcall === true) query.outcall = true;
     if (filters.fmt === true) query.fmt = true;
 
-    if (filters.adverties_category && filters.adverties_category !== "any") {
+    if (filters.adverties_category && filters.adverties_category.toLovercase() !== "any") {
       query.adverties_category = filters.adverties_category;
     }
 
-    if (filters.account_type && filters.account_type !== "all") {
+    if (filters.account_type && filters.account_type.toLovercase() !== "all") {
       query.account_type = filters.account_type;
     }
 
-    if (filters.for && filters.for !== "anyone") {
-      query.for = filters.for;
+    if (filters.for && filters.for.toLovercase() !== "anyone") {
+      query.escortFor = filters.for;
     }
 
     // ✅ GENDER (single value in DB)
-    if (filters.gender && filters.gender !== "all") {
+    if (filters.gender && filters.gender.toLovercase() !== "all") {
       query.gender = filters.gender;   // Male / Female / Transgender
     }
 
     // ✅ OTHER FIELDS (same model)
-    if (filters.ethnicity && filters.ethnicity !== "any") {
+    if (filters.ethnicity && filters.ethnicity.toLovercase() !== "any") {
       query.ethnicity = filters.ethnicity;
     }
 
-    if (filters.bustSize && filters.bustSize !== "any") {
+    if (filters.bustSize && filters.bustSize.toLovercase() !== "any") {
       query.bustSize = filters.bustSize;
     }
 
-    if (filters.hairColor && filters.hairColor !== "any") {
+    if (filters.hairColor && filters.hairColor.toLovercase() !== "any") {
       query.hairColor = filters.hairColor;
     }
 
