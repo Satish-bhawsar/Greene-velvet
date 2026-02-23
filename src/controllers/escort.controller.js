@@ -1078,6 +1078,7 @@ export async function fetchescortServicescontroller(request, response) {
 export async function fetchFiltercityescortscontroller(request, response) {
     try {
         let filters = {};
+        let genderFilter = null;
 
         // 🔹 Parse filters from query string
         for (const key in request.query) {
@@ -1108,9 +1109,19 @@ export async function fetchFiltercityescortscontroller(request, response) {
         if (filters.outcall === true) query.outcall = true;
         if (filters.fmt === true) query.fmt = true;
 
-        if (filters.gender && filters.gender.toLowerCase() !== "all") {
-            query.gender = filters.gender;
+
+        if (filters.gender) {
+            if (Array.isArray(filters.gender)) {
+                if (!filters.gender.includes("all")) {
+                    genderFilter = { gender: { $in: filters.gender } };
+                }
+            } else if (typeof filters.gender === "string") {
+                if (filters.gender.toLowerCase() !== "all") {
+                    genderFilter = { gender: filters.gender };
+                }
+            }
         }
+
         if (filters.adverties_category && filters.adverties_category.toLowerCase() !== "any") {
             query.adverties_category = filters.adverties_category;
         }
@@ -1141,14 +1152,22 @@ export async function fetchFiltercityescortscontroller(request, response) {
 
         console.log("Final Query:", query);
 
+
+
         // 🔹 Fetch escorts
         const escortList = await EscortModel.find(query)
-            .populate("escortdetail")
+            .populate({
+                path: "escortdetail",
+                match: genderFilter ? genderFilter : {},
+            })
             .populate("escortessential");
 
-        console.log("Escort List:", escortList.length);
+        const filteredEscorts = escortList.filter(
+            (e) => e.escortdetail !== null
+        );
+        console.log("filteredEscorts List:", filteredEscorts.length);
 
-        if (escortList.length === 0) {
+        if (filteredEscorts.length === 0) {
             return response.status(404).json({
                 message: "No escorts found",
                 success: false,
@@ -1158,7 +1177,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
 
         return response.status(200).json({
             message: "Filtered escorts fetched",
-            data: escortList,
+            data: filteredEscorts,
             success: true,
             error: false,
         });
