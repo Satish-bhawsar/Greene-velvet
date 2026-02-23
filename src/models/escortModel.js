@@ -344,6 +344,55 @@ const EscortSchema = new mongoose.Schema({
         }
     ],
 
+
+    // =======================< details >=======================
+    gender: String,
+
+    age: Number,
+
+    sexuality: String,
+
+    showAge: {
+        type: Boolean,
+        default: false
+    },
+
+    landline: String,
+
+    displayLandNo: {
+        type: Boolean,
+        default: false
+    },
+
+    displayConatct: {
+        type: Boolean,
+        default: false
+    },
+
+    website: String,
+
+    social: String,
+
+    preferredContact: {
+        phoneCall: { type: Boolean, default: false },
+        sms: { type: Boolean, default: false }
+    },
+
+    // =======================< essentials >======================
+    height: Number,
+    bustSize: String,
+    hairColor: String,
+    hairStyle: String,
+    ethnicity: String,
+    eyeColor: String,
+    dressSize: String,
+    speakingLanguage: [String],
+
+    // ======================< pefer >========================
+
+    escortprefer: { type: [String], default: [] }
+
+
 }, {
     timestamps: true
 })
