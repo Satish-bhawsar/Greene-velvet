@@ -1178,7 +1178,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
                 match: genderMatch,
             })
             .populate({
-                path: "escortessential",
+                path: "escortessentials",
                 match: essentialMatch,
             })
 
