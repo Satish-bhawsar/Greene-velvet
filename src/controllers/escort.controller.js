@@ -1080,12 +1080,9 @@ export async function fetchFiltercityescortscontroller(request, response) {
     try {
         let filters = {};
 
-        // 1. 🔹 Parse filters from query string (Handle nested filters[key] format)
-        // 1. 🔹 Parse filters from query string (Improved for Arrays)
+        // 1. 🔹 Smart Parsing (Keys like 'gender][0' to clean 'gender' array)
         for (const key in request.query) {
             if (key.startsWith("filters[")) {
-                // Purana regex: /^filters\[(.*)\]$/  <-- Ye 'gender][0' de raha tha
-                // Naya logic: brackets ke andar ka pehla word nikaalna
                 const actualKey = key.split('[')[1].split(']')[0];
                 let value = request.query[key];
 
@@ -1093,7 +1090,6 @@ export async function fetchFiltercityescortscontroller(request, response) {
                 else if (value === "false") value = false;
 
                 if (value !== "" && value !== null && value !== undefined) {
-                    // Agar key pehle se exist karti hai (like gender), toh array mein push karein
                     if (filters[actualKey]) {
                         if (Array.isArray(filters[actualKey])) {
                             filters[actualKey].push(value);
@@ -1107,108 +1103,62 @@ export async function fetchFiltercityescortscontroller(request, response) {
             }
         }
 
-        console.log("Parsed Filters:", filters);
+        console.log("1. Parsed Filters:", filters);
 
-        // 2. 🔹 Build Main Query (for EscortModel fields)
+        // 2. 🔹 Main Query (EscortModel)
         const query = {};
 
-        // City query fix
+        // City match (Direct string match)
         if (filters.city) {
-            query.city = new RegExp(`^${filters.city}$`, "i");
+            // Agar city frontend se caps me aa rahi hai, toh ensure karein DB ke format se match ho
+            // Yahan hum manual handle kar rahe hain to avoid Regex issues in console
+            query.city = filters.city;
         }
+
         if (filters.isVerified === true) query.isVerified = true;
         if (filters.incall === true) query.incall = true;
         if (filters.outcall === true) query.outcall = true;
-        if (filters.fmt === true) query.fmt = true;
 
-        if (filters.adverties_category && filters.adverties_category.toLowerCase() !== "any") {
-            query.adverties_category = filters.adverties_category;
-        }
-
-        if (filters.account_type) query.account_type = filters.account_type;
-        if (filters.for) query.for = filters.for;
-        if (filters.ethnicity) query.ethnicity = filters.ethnicity;
-        if (filters.bustSize) query.bustSize = filters.bustSize;
-        if (filters.hairColor) query.hairColor = filters.hairColor;
-
-        // AGE RANGE
-        if (filters.age) {
-            if (filters.age.includes("-")) {
-                const [min, max] = filters.age.split("-").map(Number);
-                query.age = { $gte: min, $lte: max };
-            } else if (filters.age.includes("+")) {
-                const min = Number(filters.age.replace("+", ""));
-                query.age = { $gte: min };
-            }
-        }
-
-        // RATE RANGE
-        if (filters.rateFrom) {
-            const minRate = Number(filters.rateFrom.replace("+", ""));
-            query.rateFrom = { $gte: minRate };
-        }
-
-        // 3. 🔹 GENDER Logic (Filter for linked 'escortdetail' model)
+        // 3. 🔹 Gender Match (escortdetail)
         let genderMatch = {};
         if (filters.gender) {
-            let genderArray = [];
+            // Ensure it's an array
+            const genderArray = Array.isArray(filters.gender)
+                ? filters.gender
+                : [filters.gender];
 
-            // Handle both string (comma separated) and array formats
-            if (typeof filters.gender === "string") {
-                genderArray = filters.gender.split(",").map(g => g.trim());
-            } else if (Array.isArray(filters.gender)) {
-                genderArray = filters.gender;
-            }
+            // Filter out "all" if present
+            const finalGenderList = genderArray.filter(g => g.toLowerCase() !== "all");
 
-            // If "all" is not selected, apply case-insensitive regex match
-            if (genderArray.length > 0 && !genderArray.includes("all")) {
-                genderMatch = {
-                    gender: {
-                        $in: genderArray.map(g => new RegExp(`^${g}$`, "i"))
-                    }
-                };
+            if (finalGenderList.length > 0) {
+                // Direct $in with string values
+                genderMatch = { gender: { $in: finalGenderList } };
             }
         }
 
-        console.log("Main Query:", JSON.stringify(query));
-        console.log("Gender Match (escortdetail):", JSON.stringify(genderMatch));
+        console.log("2. Main Query Body:", query);
+        console.log("3. Gender Match Body:", genderMatch);
 
-        // 4. 🔹 Fetch & Populate
+        // 4. 🔹 Fetching
         const escortList = await EscortModel.find(query)
             .populate({
                 path: "escortdetail",
-                match: genderMatch, // Linked collection filtering
+                match: genderMatch,
             })
             .populate("escortessential");
 
-        // 5. 🔹 Filter out results where linked 'escortdetail' didn't match the gender
-        // Because Mongoose 'match' returns the parent with escortdetail: null if no match found
-        const filteredEscorts = escortList.filter(
-            (e) => e.escortdetail !== null
-        );
+        // 5. 🔹 Results Filtering
+        const filteredEscorts = escortList.filter(e => e.escortdetail !== null);
 
-        console.log("Results found:", filteredEscorts.length);
-
-        if (filteredEscorts.length === 0) {
-            return response.status(404).json({
-                message: "No escorts found matching these filters",
-                success: false,
-                data: []
-            });
-        }
+        console.log("4. Final Results Count:", filteredEscorts.length);
 
         return response.status(200).json({
-            message: "Filtered escorts fetched successfully",
-            data: filteredEscorts,
-            success: true
+            success: true,
+            data: filteredEscorts
         });
 
     } catch (error) {
-        console.error("Filter Error:", error);
-        return response.status(500).json({
-            message: error.message || "Internal Server Error",
-            success: false,
-            error: true,
-        });
+        console.error("Error:", error);
+        return response.status(500).json({ success: false, message: error.message });
     }
 }
