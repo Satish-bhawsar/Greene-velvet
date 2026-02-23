@@ -1080,7 +1080,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
     try {
         let filters = {};
 
-        // 1. 🔹 Smart Parsing (Keys like 'gender][0' to clean 'gender' array)
+        // 1. 🔹 Sabse Pehle: Parsing ko robust banaya (gender][0 handle karne ke liye)
         for (const key in request.query) {
             if (key.startsWith("filters[")) {
                 const actualKey = key.split('[')[1].split(']')[0];
@@ -1091,11 +1091,9 @@ export async function fetchFiltercityescortscontroller(request, response) {
 
                 if (value !== "" && value !== null && value !== undefined) {
                     if (filters[actualKey]) {
-                        if (Array.isArray(filters[actualKey])) {
-                            filters[actualKey].push(value);
-                        } else {
-                            filters[actualKey] = [filters[actualKey], value];
-                        }
+                        filters[actualKey] = Array.isArray(filters[actualKey])
+                            ? [...filters[actualKey], value]
+                            : [filters[actualKey], value];
                     } else {
                         filters[actualKey] = value;
                     }
@@ -1103,43 +1101,59 @@ export async function fetchFiltercityescortscontroller(request, response) {
             }
         }
 
-        console.log("1. Parsed Filters:", filters);
-
-        // 2. 🔹 Main Query (EscortModel)
         const query = {};
 
-        // City match (Direct string match)
+        // 2. 🔹 City Filter: Isse "ADELAIDE" aur "Adelaide" dono milenge
         if (filters.city) {
-            // Agar city frontend se caps me aa rahi hai, toh ensure karein DB ke format se match ho
-            // Yahan hum manual handle kar rahe hain to avoid Regex issues in console
-            query.city = filters.city;
+            query.city = { $regex: new RegExp(`^${filters.city}$`, "i") };
         }
 
+        // 3. 🔹 Boolean Logic: Agar 'false' hai toh filter mat lagao (default behavior)
         if (filters.isVerified === true) query.isVerified = true;
         if (filters.incall === true) query.incall = true;
         if (filters.outcall === true) query.outcall = true;
+        if (filters.fmt === true) query.fmt = true;
 
-        // 3. 🔹 Gender Match (escortdetail)
-        let genderMatch = {};
-        if (filters.gender) {
-            // Ensure it's an array
-            const genderArray = Array.isArray(filters.gender)
-                ? filters.gender
-                : [filters.gender];
+        // 4. 🔹 String Matchings
+        if (filters.adverties_category && filters.adverties_category.toLowerCase() !== "any") {
+            query.adverties_category = filters.adverties_category;
+        }
+        if (filters.account_type) query.account_type = filters.account_type;
+        if (filters.ethnicity) query.ethnicity = filters.ethnicity;
+        if (filters.bustSize) query.bustSize = filters.bustSize;
+        if (filters.hairColor) query.hairColor = filters.hairColor;
 
-            // Filter out "all" if present
-            const finalGenderList = genderArray.filter(g => g.toLowerCase() !== "all");
-
-            if (finalGenderList.length > 0) {
-                // Direct $in with string values
-                genderMatch = { gender: { $in: finalGenderList } };
+        // 5. 🔹 Age & Rate Range
+        if (filters.age) {
+            const ageStr = String(filters.age);
+            if (ageStr.includes("-")) {
+                const [min, max] = ageStr.split("-").map(Number);
+                query.age = { $gte: min, $lte: max };
+            } else if (ageStr.includes("+")) {
+                query.age = { $gte: Number(ageStr.replace("+", "")) };
             }
         }
 
-        console.log("2. Main Query Body:", query);
-        console.log("3. Gender Match Body:", genderMatch);
+        if (filters.rateFrom) {
+            query.rateFrom = { $gte: Number(String(filters.rateFrom).replace("+", "")) };
+        }
 
-        // 4. 🔹 Fetching
+        // 6. 🔹 Gender Logic (From linked collection 'escortdetail')
+        let genderMatch = {};
+        if (filters.gender) {
+            let gArray = Array.isArray(filters.gender) ? filters.gender : [filters.gender];
+            // 'all' ko ignore karo
+            gArray = gArray.filter(g => g.toLowerCase() !== "all");
+
+            if (gArray.length > 0) {
+                // Regex 'i' flag lagaya taki Male/male dono match ho jayein
+                genderMatch = {
+                    gender: { $in: gArray.map(g => new RegExp(`^${g}$`, "i")) }
+                };
+            }
+        }
+
+        // 7. 🔹 DB Search
         const escortList = await EscortModel.find(query)
             .populate({
                 path: "escortdetail",
@@ -1147,18 +1161,17 @@ export async function fetchFiltercityescortscontroller(request, response) {
             })
             .populate("escortessential");
 
-        // 5. 🔹 Results Filtering
-        const filteredEscorts = escortList.filter(e => e.escortdetail !== null);
-
-        console.log("4. Final Results Count:", filteredEscorts.length);
+        // 8. 🔹 Final Filtering: Unhe nikalo jinka gender match nahi hua
+        const finalData = escortList.filter(e => e.escortdetail !== null);
 
         return response.status(200).json({
             success: true,
-            data: filteredEscorts
+            count: finalData.length,
+            data: finalData
         });
 
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Filter Error:", error);
         return response.status(500).json({ success: false, message: error.message });
     }
 }
