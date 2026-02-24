@@ -1088,8 +1088,8 @@ export async function fetchFiltercityescortscontroller(request, response) {
             query.account_type = filters.account_type;
         }
 
-        if (filters.for && filters.for !== "Anyone") {
-            query.for = filters.for;
+        if (filters.escortFor && filters.escortFor !== "Anyone") {
+            query.escortFor = filters.escortFor;
         }
 
         // ✅ GENDER (single value in DB)

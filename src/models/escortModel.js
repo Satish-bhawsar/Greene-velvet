@@ -398,8 +398,8 @@ const EscortSchema = new mongoose.Schema({
     // =====================< filetr >==========================
 
     escortFor: {
-        type: String,
-        default: "",
+        type: [String],
+        default: [],
     },
 
     infmty: {
