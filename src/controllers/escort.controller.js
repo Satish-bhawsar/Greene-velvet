@@ -1080,7 +1080,10 @@ export async function fetchFiltercityescortscontroller(request, response) {
         const query = {};
 
         if (filters.city) query.city = filters.city;
-        if (filters.name) query.name = filters.name;
+
+        if (filters.name) {
+            query.name = { $regex: filters.name, $options: "i" };
+        }
         if (filters.isVerified === true) query.isVerified = true;
         if (filters.incall === true) query.incall = true;
         if (filters.outcall === true) query.outcall = true;
