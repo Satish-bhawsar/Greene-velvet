@@ -30,6 +30,6 @@ export const sendVerificationEmail = async (email, link) => {
         console.log(`Verification email sent to ${email}`);
 
     } catch (error) {
-        console.error(`Email not sent to ${email}:`, err.message);
+        console.error(`Email not sent to ${email}:`, error.message);
     }
 }
