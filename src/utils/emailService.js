@@ -8,7 +8,16 @@ const transporter = nodemailer.createTransport({
     },
 });
 
+const isValidEmail = (email) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
 export const sendVerificationEmail = async (email, link) => {
+
+    if (!isValidEmail(email)) {
+        console.log(`Invalid email format: ${email} - skipping`);
+        return;
+    }
+
     try {
         await transporter.sendMail({
             from: `"GREENE VELVET" <${process.env.EMAIL_USER}>`,
