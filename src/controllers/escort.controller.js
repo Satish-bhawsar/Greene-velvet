@@ -1094,7 +1094,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
 
         // ✅ GENDER (single value in DB)
         if (filters.gender && filters.gender !== "All") {
-            query.gender = filters.gender;   // Male / Female / Transgender
+            query.gender = { $in: filters.gender };   // Male / Female / Transgender
         }
 
         // ✅ OTHER FIELDS (same model)
