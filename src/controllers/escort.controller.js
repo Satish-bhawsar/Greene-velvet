@@ -1093,8 +1093,10 @@ export async function fetchFiltercityescortscontroller(request, response) {
         }
 
         // ✅ GENDER (single value in DB)
-        if (filters.gender && filters.gender !== "All") {
-            query.gender = { $in: filters.gender };   // Male / Female / Transgender
+        if (filters.gender && filters.gender.length > 0) {
+            if (!filters.gender.includes("All")) {
+                query.gender = { $in: filters.gender };
+            }
         }
 
         // ✅ OTHER FIELDS (same model)
