@@ -69,7 +69,7 @@ export async function registerEscortcontroller(request, response) {
 
         const verifyLink = `https://greene-velvet.onrender.com/escort/verify-email?token=${token}`
 
-        // sendVerificationEmail(email, verifyLink);
+        sendVerificationEmail(email, verifyLink);
 
         return response.json({
             message: "Verification link sent to your email",

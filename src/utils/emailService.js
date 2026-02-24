@@ -9,11 +9,12 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendVerificationEmail = async (email, link) => {
-    return transporter.sendMail({
-        from: `"GREENE VELVET" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: "Complete My Registration - GreeneVelvet",
-        html: `
+    try {
+        await transporter.sendMail({
+            from: `"GREENE VELVET" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: "Complete My Registration - GreeneVelvet",
+            html: `
         <h2>Please Confirm Your Email Address</h2>
         <p>Thank you for registering with GreeneVelvet.</p>
         <p>Click the button below to complete your registration:</p>
@@ -25,5 +26,10 @@ export const sendVerificationEmail = async (email, link) => {
       </a>
       <p>If you can't find the email, check your spam folder for Greenvelvet.com.au</p>`
 
-    });
+        });
+        console.log(`Verification email sent to ${email}`);
+
+    } catch (error) {
+        console.error(`Email not sent to ${email}:`, err.message);
+    }
 }
