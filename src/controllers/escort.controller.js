@@ -1169,3 +1169,59 @@ export async function fetchFiltercityescortscontroller(request, response) {
         });
     }
 }
+
+
+export async function fetchFilterHomescortscontroller(req, res) {
+    try {
+        const {
+            country,
+            city,
+            name,
+            keyword,
+            gender,
+            account_type,
+            adverties_category,
+        } = req.query; // query params se filter lenge
+
+        const query = {};
+
+        if (country) query.country = country;
+        if (city) query.city = city;
+        if (name) query.name = name;
+        if (gender) query.gender = gender;
+        if (account_type) query.account_type = account_type;
+        if (adverties_category) query.adverties_category = adverties_category;
+
+        // keyword search on name or highlights
+        if (keyword) {
+            query.$or = [
+                { name: { $regex: keyword, $options: "i" } },
+                { highlights: { $regex: keyword, $options: "i" } },
+            ];
+        }
+
+        const escortList = await EscortModel.find(query);
+
+        if (!escortList || escortList.length === 0) {
+            return res.status(404).json({
+                message: "No escorts found",
+                success: false,
+                error: true,
+            });
+        }
+
+        return res.status(200).json({
+            message: "Filtered escorts fetched",
+            data: escortList,
+            success: true,
+            error: false,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            message: error.message || error,
+            success: false,
+            error: true,
+        });
+    }
+}
