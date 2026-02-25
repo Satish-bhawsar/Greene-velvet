@@ -1193,10 +1193,10 @@ export async function fetchFilterHomescortscontroller(req, res) {
         if (country) query.country = country.toUpperCase();
         if (city) query.city = city.toUpperCase();
         if (name) query.name = name;
-        if (gender) query.gender = gender;
-        if (account_type) query.account_type = account_type;
-        if (adverties_category) query.adverties_category = adverties_category;
-
+        
+        if (gender && gender !== "All") query.gender = gender;
+        if (account_type && account_type !== "All") query.account_type = account_type;
+        if (adverties_category && adverties_category !== "Any") query.adverties_category = adverties_category;
         // keyword search on name or highlights
         if (keyword) {
             query.$or = [
