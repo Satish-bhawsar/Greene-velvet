@@ -1174,6 +1174,8 @@ export async function fetchFiltercityescortscontroller(request, response) {
 export async function fetchFilterHomescortscontroller(req, res) {
     try {
         const {
+            isVerified,
+            role,
             country,
             city,
             name,
@@ -1185,8 +1187,11 @@ export async function fetchFilterHomescortscontroller(req, res) {
 
         const query = {};
 
-        if (country) query.country = country;
-        if (city) query.city = city;
+        if (role) query.role = role;
+        if (isVerified) query.isVerified = isVerified === "true"; // query params are strings
+
+        if (country) query.country = country.toUpperCase();
+        if (city) query.city = city.toUpperCase();
         if (name) query.name = name;
         if (gender) query.gender = gender;
         if (account_type) query.account_type = account_type;
@@ -1196,6 +1201,7 @@ export async function fetchFilterHomescortscontroller(req, res) {
         if (keyword) {
             query.$or = [
                 { name: { $regex: keyword, $options: "i" } },
+                { city: { $regex: keyword, $options: "i" } },
                 { highlights: { $regex: keyword, $options: "i" } },
             ];
         }
