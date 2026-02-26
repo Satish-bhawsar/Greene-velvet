@@ -1239,7 +1239,7 @@ export const advanceSearchController = async (request, response) => {
 
         let query = {};
 
-        // booleans
+        // ---------- booleans ----------
         if (filters.isVerified === "true") query.isVerified = true;
         if (filters.isAvailable === "true") query.isAvailable = true;
         if (filters.tour === "true") query.tour = true;
@@ -1249,16 +1249,12 @@ export const advanceSearchController = async (request, response) => {
         if (filters.outcall === "true") query.outcall = true;
         if (filters.fmty === "true") query.fmty = true;
 
-        // location (CAPITAL match)
+        // ---------- location (CAPITAL match) ----------
         if (filters.country) query.country = filters.country;
         if (filters.city) query.city = filters.city;
 
-        // strings
+        // ---------- strings ----------
         if (filters.day) query.day = filters.day;
-
-        if (filters.duration) query.duration = filters.duration;
-        if (filters.service) query.service = filters.service;
-
         if (filters.adverties_category)
             query.adverties_category = filters.adverties_category;
         if (filters.escortFor) query.escortFor = filters.escortFor;
@@ -1266,21 +1262,14 @@ export const advanceSearchController = async (request, response) => {
         if (filters.dressSize) query.dressSize = filters.dressSize;
         if (filters.hairColor) query.hairColor = filters.hairColor;
 
-        // rates range
-        if (filters.rateMin || filters.rateMax) {
-            query.rateFrom = {};
-            if (filters.rateMin) query.rate.$gte = Number(filters.rateMin);
-            if (filters.rateMax) query.rate.$lte = Number(filters.rateMax);
-        }
-
-        // age range
+        // ---------- age range ----------
         if (filters.ageMin || filters.ageMax) {
             query.age = {};
             if (filters.ageMin) query.age.$gte = Number(filters.ageMin);
             if (filters.ageMax) query.age.$lte = Number(filters.ageMax);
         }
 
-        // time window
+        // ---------- time window ----------
         if (filters.timeFrom && filters.timeTo) {
             query.availableTime = {
                 $gte: filters.timeFrom,
@@ -1288,13 +1277,12 @@ export const advanceSearchController = async (request, response) => {
             };
         }
 
-
-        // ---------- Aggregation ----------
+        // ---------- Aggregation Pipeline ----------
         let pipeline = [
             // join services
             {
                 $lookup: {
-                    from: "services", // collection name
+                    from: "services",
                     localField: "services",
                     foreignField: "_id",
                     as: "serviceData",
@@ -1305,7 +1293,7 @@ export const advanceSearchController = async (request, response) => {
             // join rates
             {
                 $lookup: {
-                    from: "rates", // collection name
+                    from: "rates",
                     localField: "rates",
                     foreignField: "_id",
                     as: "rateData",
@@ -1317,21 +1305,21 @@ export const advanceSearchController = async (request, response) => {
             { $match: query },
         ];
 
-        // service filter (UI: service=massage)
+        // ---------- service filter (UI: service=massage) ----------
         if (filters.service) {
             pipeline.push({
                 $match: { "serviceData.title": filters.service },
             });
         }
 
-        // duration filter (UI: duration=30 min)
+        // ---------- duration filter (UI: duration=30 min) ----------
         if (filters.duration) {
             pipeline.push({
                 $match: { "rateData.duration": filters.duration },
             });
         }
 
-        // rate range (UI: rateFrom, rateTo)
+        // ---------- rate range (UI: rateMin, rateMax) ----------
         if (filters.rateMin || filters.rateMax) {
             let rateQuery = {};
             if (filters.rateMin) rateQuery.$gte = Number(filters.rateMin);
@@ -1341,6 +1329,18 @@ export const advanceSearchController = async (request, response) => {
                 $match: { "rateData.price": rateQuery },
             });
         }
+
+        // ✅ ---------- REMOVE DUPLICATES ----------
+        pipeline.push({
+            $group: {
+                _id: "$_id",
+                doc: { $first: "$$ROOT" },
+            },
+        });
+
+        pipeline.push({
+            $replaceRoot: { newRoot: "$doc" },
+        });
 
         const escorts = await EscortModel.aggregate(pipeline);
 
@@ -1352,11 +1352,10 @@ export const advanceSearchController = async (request, response) => {
             data: escorts,
         });
 
-
     } catch (error) {
         console.log("Advance Search Error:", error);
         response.status(500).json({
-            message: "Advance search failed" || error,
+            message: "Advance search failed",
             success: false,
             error: true,
         });
