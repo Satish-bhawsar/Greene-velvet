@@ -1193,7 +1193,7 @@ export async function fetchFilterHomescortscontroller(req, res) {
         if (country) query.country = country.toUpperCase();
         if (city) query.city = city.toUpperCase();
         if (name) query.name = name;
-        
+
         if (gender && gender !== "All") query.gender = gender;
         if (account_type && account_type !== "All") query.account_type = account_type;
         if (adverties_category && adverties_category !== "Any") query.adverties_category = adverties_category;
@@ -1231,3 +1231,134 @@ export async function fetchFilterHomescortscontroller(req, res) {
         });
     }
 }
+
+
+export const advanceSearchController = async (request, response) => {
+    try {
+        const filters = request.query; // ?city=DELHI&country=INDIA&incall=true...
+
+        let query = {};
+
+        // booleans
+        if (filters.isVerified === "true") query.isVerified = true;
+        if (filters.isAvailable === "true") query.isAvailable = true;
+        if (filters.tour === "true") query.tour = true;
+        if (filters.video === "true") query.video = true;
+
+        if (filters.incall === "true") query.incall = true;
+        if (filters.outcall === "true") query.outcall = true;
+        if (filters.fmty === "true") query.fmty = true;
+
+        // location (CAPITAL match)
+        if (filters.country) query.country = filters.country;
+        if (filters.city) query.city = filters.city;
+
+        // strings
+        if (filters.day) query.day = filters.day;
+
+        if (filters.duration) query.duration = filters.duration;
+        if (filters.service) query.service = filters.service;
+
+        if (filters.adverties_category)
+            query.adverties_category = filters.adverties_category;
+        if (filters.escortFor) query.escortFor = filters.escortFor;
+        if (filters.account_type) query.account_type = filters.account_type;
+        if (filters.dressSize) query.dressSize = filters.dressSize;
+        if (filters.hairColor) query.hairColor = filters.hairColor;
+
+        // rates range
+        if (filters.rateMin || filters.rateMax) {
+            query.rateFrom = {};
+            if (filters.rateMin) query.rate.$gte = Number(filters.rateMin);
+            if (filters.rateMax) query.rate.$lte = Number(filters.rateMax);
+        }
+
+        // age range
+        if (filters.ageMin || filters.ageMax) {
+            query.age = {};
+            if (filters.ageMin) query.age.$gte = Number(filters.ageMin);
+            if (filters.ageMax) query.age.$lte = Number(filters.ageMax);
+        }
+
+        // time window
+        if (filters.timeFrom && filters.timeTo) {
+            query.availableTime = {
+                $gte: filters.timeFrom,
+                $lte: filters.timeTo,
+            };
+        }
+
+
+        // ---------- Aggregation ----------
+        let pipeline = [
+            // join services
+            {
+                $lookup: {
+                    from: "services", // collection name
+                    localField: "services",
+                    foreignField: "_id",
+                    as: "serviceData",
+                },
+            },
+            { $unwind: { path: "$serviceData", preserveNullAndEmptyArrays: true } },
+
+            // join rates
+            {
+                $lookup: {
+                    from: "rates", // collection name
+                    localField: "rates",
+                    foreignField: "_id",
+                    as: "rateData",
+                },
+            },
+            { $unwind: { path: "$rateData", preserveNullAndEmptyArrays: true } },
+
+            // base filters
+            { $match: query },
+        ];
+
+        // service filter (UI: service=massage)
+        if (filters.service) {
+            pipeline.push({
+                $match: { "serviceData.title": filters.service },
+            });
+        }
+
+        // duration filter (UI: duration=30 min)
+        if (filters.duration) {
+            pipeline.push({
+                $match: { "rateData.duration": filters.duration },
+            });
+        }
+
+        // rate range (UI: rateFrom, rateTo)
+        if (filters.rateMin || filters.rateMax) {
+            let rateQuery = {};
+            if (filters.rateMin) rateQuery.$gte = Number(filters.rateMin);
+            if (filters.rateMax) rateQuery.$lte = Number(filters.rateMax);
+
+            pipeline.push({
+                $match: { "rateData.price": rateQuery },
+            });
+        }
+
+        const escorts = await EscortModel.aggregate(pipeline);
+
+        return response.json({
+            message: "Escort found",
+            success: true,
+            error: false,
+            count: escorts.length,
+            data: escorts,
+        });
+
+
+    } catch (error) {
+        console.log("Advance Search Error:", error);
+        response.status(500).json({
+            message: "Advance search failed" || error,
+            success: false,
+            error: true,
+        });
+    }
+};
