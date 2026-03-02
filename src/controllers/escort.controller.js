@@ -15,6 +15,7 @@ import deleteImageCloudinary from "../utils/deleteImageCloudinary.js";
 import deleteVideoCloudinary from "../utils/deleteVideoCloudinary.js";
 import ServiceModel from "../models/escortserviceModel.js";
 import RatesModel from "../models/escortratesModel.js";
+import ClientModel from "../models/clientModel.js";
 
 // Escort Register controll
 export async function registerEscortcontroller(request, response) {
@@ -31,6 +32,16 @@ export async function registerEscortcontroller(request, response) {
             })
         }
 
+
+        const exstingEmail = await ClientModel.findOne({ email })
+        
+        if(exstingEmail) {
+            return response.status(401).json({
+                message: "This email is already registered as Client, You cannot register as Escort with",
+                success: false,
+                error: true
+            })
+        }
 
         const escort = await EscortModel.findOne({ email })
 

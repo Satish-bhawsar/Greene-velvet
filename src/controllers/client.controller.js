@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import ClientModel from "../models/clientModel.js";
 import { generatedclientId } from "../utils/generatedId.js";
 import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
+import EscortModel from "../models/escortModel.js";
 
 // client register controll
 export async function registerClientcontroller(request, response) {
@@ -14,6 +15,16 @@ export async function registerClientcontroller(request, response) {
                 message: "Provide name, email, password, mobile",
                 error: true,
                 success: false
+            })
+        }
+
+        const exstingEmail = await EscortModel.findOne({ email })
+        
+        if(exstingEmail) {
+            return response.status(401).json({
+                message: "This email is already registered as Escort, You cannot register as Client with",
+                success: false,
+                error: true
             })
         }
 
