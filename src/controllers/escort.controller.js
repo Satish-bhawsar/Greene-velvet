@@ -34,8 +34,8 @@ export async function registerEscortcontroller(request, response) {
 
 
         const exstingEmail = await ClientModel.findOne({ email })
-        
-        if(exstingEmail) {
+
+        if (exstingEmail) {
             return response.status(401).json({
                 message: "This email is already registered as Client, You cannot register as Escort with",
                 success: false,
@@ -739,12 +739,12 @@ export async function uploadImagescontroller(request, response) {
 }
 
 // upload gallery videos
-export async function uploadVideoscontroller(req, res) {
+export async function uploadVideoscontroller(request, response) {
     try {
-        const { escortId, deletedVideos } = req.body;
+        const { escortId, deletedVideos } = request.body;
 
         if (!escortId) {
-            return res.status(400).json({
+            return response.status(400).json({
                 message: "escortId required",
                 success: false,
                 error: true
@@ -779,8 +779,8 @@ export async function uploadVideoscontroller(req, res) {
 
         // 2️⃣ Upload new videos to Cloudinary
         let uploadedVideos = [];
-        if (req.files && req.files.length > 0) {
-            for (let file of req.files) {
+        if (request.files && request.files.length > 0) {
+            for (let file of request.files) {
                 const uploadResult = await uploadVideoCloudinary(file, "gallery/videos");
                 uploadedVideos.push({
                     public_id: uploadResult.public_id,
@@ -805,7 +805,7 @@ export async function uploadVideoscontroller(req, res) {
             { $set: { "gallery.videos": last6Videos } }
         );
 
-        return res.status(200).json({
+        return response.status(200).json({
             message: "Video gallery updated successfully",
             success: true,
             error: false,
@@ -820,7 +820,7 @@ export async function uploadVideoscontroller(req, res) {
 
     } catch (error) {
         console.error(error);
-        return res.status(500).json({
+        return response.status(500).json({
             message: error.message || error,
             success: false,
             error: true
@@ -1182,7 +1182,7 @@ export async function fetchFiltercityescortscontroller(request, response) {
 }
 
 
-export async function fetchFilterHomescortscontroller(req, res) {
+export async function fetchFilterHomescortscontroller(request, response) {
     try {
         const {
             isVerified,
@@ -1194,7 +1194,9 @@ export async function fetchFilterHomescortscontroller(req, res) {
             gender,
             account_type,
             adverties_category,
-        } = req.query; // query params se filter lenge
+            page = 1,
+            limit = 20,
+        } = request.query; // query params se filter lenge
 
         const query = {};
 
@@ -1216,26 +1218,38 @@ export async function fetchFilterHomescortscontroller(req, res) {
                 { highlights: { $regex: keyword, $options: "i" } },
             ];
         }
+        const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const escortList = await EscortModel.find(query);
+        const escortList = await EscortModel.find(query)
+            .skip(skip)
+            .limit(parseInt(limit))
+            .select("name city country gender account_type adverties_category highlights avatar rateFrom")
+            .lean();
+
+        const total = await EscortModel.countDocuments(query);
 
         if (!escortList || escortList.length === 0) {
-            return res.status(404).json({
+            return response.status(404).json({
                 message: "No escorts found",
                 success: false,
                 error: true,
+                data: [],
+                total: 0
             });
         }
 
-        return res.status(200).json({
+        return response.status(200).json({
             message: "Filtered escorts fetched",
             data: escortList,
+            total,
+            page: parseInt(page),
+            limit: parseInt(limit),
             success: true,
             error: false,
         });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({
+        return response.status(500).json({
             message: error.message || error,
             success: false,
             error: true,
