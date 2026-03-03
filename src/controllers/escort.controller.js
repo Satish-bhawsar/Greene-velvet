@@ -1195,7 +1195,7 @@ export async function fetchFilterHomescortscontroller(request, response) {
             account_type,
             adverties_category,
             page = 1,
-            limit = 20,
+            limit = 15,
         } = request.query; // query params se filter lenge
         
         console.log("request qurey: ", request.query);
@@ -1232,7 +1232,7 @@ export async function fetchFilterHomescortscontroller(request, response) {
 
 
         console.log("escortslist: ",escortList);
-        onsole.log("total data: ", total);
+        console.log("total data: ", total);
 
         if (!escortList || escortList.length === 0) {
             return response.status(404).json({
