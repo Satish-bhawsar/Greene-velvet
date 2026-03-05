@@ -1389,10 +1389,8 @@ export const advanceSearchController = async (request, response) => {
 export const createNewsTourcontroller = async (request, response) => {
     try {
 
-        const { escortId, name, title, description } = request.body;
+        const { escortId, name, city, country, title, description } = request.body;
 
-        console.log("request.body :", request.body);
-        console.log(" request.files:", request.files);
 
         if (!escortId || !title || !description) {
             return response.status(400).json({
@@ -1449,6 +1447,8 @@ export const createNewsTourcontroller = async (request, response) => {
         // ✅ create post
         const post = await NewsAndTourModel.create({
             escortId,
+            city,
+            country,
             name,
             title,
             description,
@@ -1684,6 +1684,54 @@ export const deleteNewsTourController = async (request, response) => {
     } catch (error) {
 
         console.log("deleteNewsTourController error:", error);
+
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+// fetch All NewsTour posts
+export const fetchAllNewsTourController = async (request, response) => {
+    try {
+
+        const { country, city } = request.query;
+
+        if (!country) {
+            return response.status(400).json({
+                message: "Country is required",
+                success: false,
+                error: true
+            });
+        }
+
+        let query = {
+            status: "active",
+            country: country
+        };
+
+        // ✅ city filter only when provided
+        if (city) {
+            query.city = city;
+        }
+
+        const posts = await NewsAndTourModel
+            .find(query)
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .skip(page * 10)
+
+        return response.status(200).json({
+            message: "Posts fetched successfully",
+            success: true,
+            error: false,
+            data: posts
+        });
+
+    } catch (error) {
 
         return response.status(500).json({
             message: error.message || "Server error",
