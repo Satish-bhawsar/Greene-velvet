@@ -1085,7 +1085,6 @@ export async function fetchFiltercityescortscontroller(request, response) {
             }
         }
 
-        console.log("Parsed Filters:", filters);
 
         // 🔹 Build query (ONLY EscortModel fields)
         const query = {};
@@ -1149,12 +1148,10 @@ export async function fetchFiltercityescortscontroller(request, response) {
             query.rateFrom = { $gte: minRate };
         }
 
-        console.log("FINAL QUERY:", query);
 
         // 🔹 Fetch escorts (NO populate)
         const escortList = await EscortModel.find(query);
 
-        console.log("Result count:", escortList.length);
 
         if (escortList.length === 0) {
             return response.status(404).json({
@@ -1172,7 +1169,6 @@ export async function fetchFiltercityescortscontroller(request, response) {
         });
 
     } catch (error) {
-        console.error(error);
         return response.status(500).json({
             message: error.message || error,
             success: false,
@@ -1198,7 +1194,6 @@ export async function fetchFilterHomescortscontroller(request, response) {
             limit = 15,
         } = request.query; // query params se filter lenge
 
-        console.log("request qurey: ", request.query);
         const query = {};
 
         if (role) query.role = role;
@@ -1230,10 +1225,6 @@ export async function fetchFilterHomescortscontroller(request, response) {
         const total = await EscortModel.countDocuments(query);
 
 
-
-        console.log("escortslist: ", escortList);
-        console.log("total data: ", total);
-
         if (!escortList || escortList.length === 0) {
             return response.status(404).json({
                 message: "No escorts found",
@@ -1254,7 +1245,6 @@ export async function fetchFilterHomescortscontroller(request, response) {
             error: false,
         });
     } catch (error) {
-        console.error(error);
         return response.status(500).json({
             message: error.message || error,
             success: false,
@@ -1384,7 +1374,6 @@ export const advanceSearchController = async (request, response) => {
         });
 
     } catch (error) {
-        console.log("Advance Search Error:", error);
         response.status(500).json({
             message: "Advance search failed",
             success: false,
