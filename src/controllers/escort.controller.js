@@ -1518,4 +1518,85 @@ export const fetchEscortNewsTourcontroller = async (request, response) => {
 
 }
 
+export const updateNewsTourController = async (request, response) => {
+    try {
 
+        const { _id, title, description } = request.body;
+
+        if (!_id) {
+            return response.status(400).json({
+                message: "Post _id required",
+                success: false,
+                error: true
+            });
+        }
+
+        const post = await NewsAndTourModel.findById(_id);
+
+        if (!post) {
+            return response.status(404).json({
+                message: "Post not found",
+                success: false,
+                error: true
+            });
+        }
+
+        let mediaUploads = post.media;
+
+        // ✅ if new media uploaded
+        if (request.files && request.files.length > 0) {
+
+            // delete old media from cloudinary
+            for (let m of post.media) {
+
+                const publicId = m.url.split("/").pop().split(".")[0];
+
+                await cloudinary.uploader.destroy(`newsandtour/post/${publicId}`, {
+                    resource_type: m.type === "video" ? "video" : "image"
+                });
+            }
+
+            // upload new media
+            mediaUploads = await Promise.all(
+                request.files.map(async (file) => {
+
+                    const result = await uploadMediaCloudinary(
+                        file,
+                        "newsandtour/post"
+                    );
+
+                    return {
+                        url: result.secure_url,
+                        type: result.resource_type || (file.mimetype.startsWith("video") ? "video" : "image")
+                    };
+                })
+            );
+        }
+
+        // update post
+        const updatedPost = await NewsAndTourModel.findByIdAndUpdate(
+            _id,
+            {
+                title,
+                description,
+                media: mediaUploads
+            },
+            { new: true }
+        );
+
+        return response.status(200).json({
+            message: "Post updated successfully",
+            success: true,
+            error: false,
+            data: updatedPost
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || "server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
