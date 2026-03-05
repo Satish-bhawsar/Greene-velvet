@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { advanceSearchController, changeMobilenumber, createNewsTourcontroller, escortdetailscontroller, escortLogincontroller, escortRatescontroller, escortServicescontroller, escortUploadverification, fetchEscortdetailscontroller, fetchFiltercityescortscontroller, fetchFilterHomescortscontroller, logoutEscortcontroller, registerEscortcontroller, sendOtpcontroller, updateHighlightscontroller, uploadAvatarcontroller, uploadImagescontroller, uploadVideoscontroller, verifiedEscortcontroller, verifyEmailcontroller, verifyMobileotp } from '../controllers/escort.controller.js'
+import { advanceSearchController, changeMobilenumber, createNewsTourcontroller, escortdetailscontroller, escortLogincontroller, escortRatescontroller, escortServicescontroller, escortUploadverification, fetchEscortdetailscontroller, fetchEscortNewsTourcontroller, fetchFiltercityescortscontroller, fetchFilterHomescortscontroller, logoutEscortcontroller, registerEscortcontroller, sendOtpcontroller, updateHighlightscontroller, uploadAvatarcontroller, uploadImagescontroller, uploadVideoscontroller, verifiedEscortcontroller, verifyEmailcontroller, verifyMobileotp } from '../controllers/escort.controller.js'
 import upload from "../middleware/multer.js";
 import { protect } from "../middleware/auth.js";
 
@@ -34,5 +34,6 @@ escortRouter.get("/filter-city-escorts", fetchFiltercityescortscontroller);
 escortRouter.get("/advance-search-escorts", advanceSearchController)
 
 escortRouter.post("/create-newsandtour", upload.array("media", 3), createNewsTourcontroller)
+escortRouter.get("/fetch-escort-newsandtour", fetchEscortNewsTourcontroller);
 
 export default escortRouter;

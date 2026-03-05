@@ -18,6 +18,8 @@ import RatesModel from "../models/escortratesModel.js";
 import ClientModel from "../models/clientModel.js";
 import { uploadMediaCloudinary } from "../utils/uploadMediaCloudinary.js";
 import NewsAndTourModel from "../models/newsandtourModel.js";
+import { request } from "http";
+import { response } from "express";
 
 // Escort Register controll
 export async function registerEscortcontroller(request, response) {
@@ -1480,3 +1482,40 @@ export const createNewsTourcontroller = async (request, response) => {
         });
     }
 };
+
+// individual escorts newsandtour post fetch 
+export const fetchEscortNewsTourcontroller = async (request, response) => {
+    try {
+        const { escortId } = request.query;
+
+        if (!escortId) {
+            return response.status(400).json({
+                message: "EscortId not found",
+                success: false,
+                error: true,
+            });
+        }
+
+        const posts = await NewsAndTourModel.find({
+            escortId: escortId,
+            status: "active"
+        }).sort({ createdAt: -1 });
+
+        return response.status(200).json({
+            message: "Posts fetched successfully",
+            success: true,
+            error: false,
+            data: posts
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || "Server Error",
+            success: false,
+            error: true
+        })
+    }
+
+}
+
+
