@@ -1,7 +1,11 @@
 import mongoose from "mongoose";
 
 const EscortessentialSchema = new mongoose.Schema({
-    escortId: String,
+    escortId: {
+        type: String,
+        required: true,
+        index: true
+    },
     height: Number,
     bustSize: String,
     hairColor: String,

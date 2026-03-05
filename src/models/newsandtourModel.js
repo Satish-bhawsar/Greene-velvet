@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 const newsTourSchema = new mongoose.Schema({
     escortId: {
         type: String,
-        require: [true, "escortId is required"],
+        required: true,
+        index: true
     },
     name: {
         type: String,
@@ -19,13 +20,21 @@ const newsTourSchema = new mongoose.Schema({
 
     description: {
         type: String,
+        required: true,
         trim: true,
     },
 
     media: [
         {
-            url: String,
-            type: String,
+            url: {
+                type: String,
+                required: true
+            },
+            type: {
+                type: String,
+                enum: ["image", "video"],
+                required: true
+            }
         }
     ],
 
@@ -33,7 +42,7 @@ const newsTourSchema = new mongoose.Schema({
         {
             userId: {
                 type: mongoose.Schema.Types.ObjectId,
-                ref: "userComments",
+                ref: "UserComments",
             },
             text: {
                 type: String,
@@ -47,12 +56,10 @@ const newsTourSchema = new mongoose.Schema({
     ],
 
 
-    likes: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "userLikes",
-        },
-    ],
+    likes: {
+        type: Number,
+        default: 0
+    },
 
     status: {
         type: String,

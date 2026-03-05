@@ -1,7 +1,11 @@
 import mongoose from "mongoose";
 
 const EscortpreferSchema = new mongoose.Schema({
-    escortId: { type: String, },
+    escortId: {
+        type: String,
+        required: true,
+        index: true
+    },
     escortprefer: { type: [String], default: [] }
 
 }, {

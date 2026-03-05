@@ -1,7 +1,11 @@
 import mongoose from "mongoose";
 
 const ServiceSchema = new mongoose.Schema({
-    escortId: String,
+    escortId: {
+        type: String,
+        required: true,
+        index: true
+    },
     title: {
         type: String,
         required: [true, "Service title is required"],

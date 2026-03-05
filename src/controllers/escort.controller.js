@@ -1385,25 +1385,24 @@ export const advanceSearchController = async (request, response) => {
 // NewsandTour 
 export const createNewsTourcontroller = async (request, response) => {
     try {
-        const {
-            escortId,
-            name,
-            title,
-            description,
-        } = request.body;
 
-        if (!escortId || !name || !title || !description) {
+        const { escortId, name, title, description } = request.body;
+
+        console.log("request.body :", request.body);
+        console.log(" request.files:", request.files);
+
+        if (!escortId || !title || !description) {
             return response.status(400).json({
-                message: "Required fields missing",
+                message: "escortId, title and description are required",
                 success: false,
                 error: true,
             });
         }
 
-        // ✅ file check
+        // ✅ file validation
         if (!request.files || request.files.length === 0) {
             return response.status(400).json({
-                message: "At least 1 Media file required",
+                message: "At least 1 media file required",
                 success: false,
                 error: true,
             });
@@ -1411,15 +1410,27 @@ export const createNewsTourcontroller = async (request, response) => {
 
         if (request.files.length > 3) {
             return response.status(400).json({
-                message: "Maximum 3 media allowed",
+                message: "Maximum 3 media files allowed",
                 success: false,
                 error: true,
             });
         }
 
-        // ✅ upload all media to cloudinary
+        // ✅ check escort exist
+        const escort = await EscortModel.findOne({ escortId });
+
+        if (!escort) {
+            return response.status(404).json({
+                message: "Escort not found",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ✅ upload media to cloudinary
         const mediaUploads = await Promise.all(
             request.files.map(async (file) => {
+
                 const result = await uploadMediaCloudinary(
                     file,
                     "newsandtour/post"
@@ -1427,32 +1438,44 @@ export const createNewsTourcontroller = async (request, response) => {
 
                 return {
                     url: result.secure_url,
-                    type: result.resource_type || (file.mimetype.startsWith("video") ? "video" : "image"), // image or video
+                    type: file.mimetype.startsWith("video") ? "video" : "image"
                 };
             })
         );
 
+        // ✅ create post
         const post = await NewsAndTourModel.create({
             escortId,
             name,
             title,
             description,
             status: "active",
-            media: mediaUploads,
+            media: mediaUploads
         });
+
+        console.log("post :", post);
+
+        // ✅ push post id into escort model
+        await EscortModel.findOneAndUpdate(
+            { escortId },
+            { $push: { newsTour: post._id } }
+        );
 
         return response.status(201).json({
-            message: "NewsAndTour created successfully",
+            message: "News & Tour post created successfully",
             success: true,
             error: false,
-            data: post,
+            data: post
         });
 
+        console.log("post Data:", data);
+
     } catch (error) {
+
         return response.status(500).json({
-            message: error.message || "Server error",
+            message: error.message || "Server Error",
             success: false,
-            error: true,
+            error: true
         });
     }
 };

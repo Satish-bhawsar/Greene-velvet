@@ -259,7 +259,7 @@ const EscortSchema = new mongoose.Schema({
     newsTour: [
         {
             type: mongoose.Schema.ObjectId,
-            ref: "NewsTours"
+            ref: "newsandtour"
         }
     ],
     notifications: [

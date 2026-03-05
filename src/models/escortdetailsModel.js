@@ -1,7 +1,11 @@
 import mongoose from "mongoose";
 
 const EscortdetailsSchema = new mongoose.Schema({
-    escortId: String,
+    escortId: {
+        type: String,
+        required: true,
+        index: true
+    },
     gender: String,
 
     age: Number,

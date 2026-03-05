@@ -1,7 +1,11 @@
 import mongoose from "mongoose";
 
 const RatesSchema = new mongoose.Schema({
-    escortId: String,
+    escortId: {
+        type: String,
+        required: true,
+        index: true
+    },
     label: {
         type: String,
         required: [true, "Service title is required"],
@@ -20,7 +24,7 @@ const RatesSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-},{ timestamps: true }
+}, { timestamps: true }
 
 )
 
