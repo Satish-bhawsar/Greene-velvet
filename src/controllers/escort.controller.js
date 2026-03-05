@@ -1518,6 +1518,7 @@ export const fetchEscortNewsTourcontroller = async (request, response) => {
 
 }
 
+// update NewsTour
 export const updateNewsTourController = async (request, response) => {
     try {
 
@@ -1618,6 +1619,74 @@ export const updateNewsTourController = async (request, response) => {
 
         return response.status(500).json({
             message: error.message || "server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+// Delete NewsTour
+export const deleteNewsTourController = async (request, response) => {
+    try {
+
+        const { _id } = request.body;
+
+        if (!_id) {
+            return response.status(400).json({
+                message: "Post _id required",
+                success: false,
+                error: true
+            });
+        }
+
+        const post = await NewsAndTourModel.findById(_id);
+
+        if (!post) {
+            return response.status(404).json({
+                message: "Post not found",
+                success: false,
+                error: true
+            });
+        }
+
+        // ✅ Delete media from cloudinary
+        if (post.media && post.media.length > 0) {
+
+            for (let m of post.media) {
+
+                if (m.public_id) {
+                    await cloudinary.uploader.destroy(
+                        m.public_id,
+                        {
+                            resource_type: m.type === "video" ? "video" : "image"
+                        }
+                    );
+                }
+            }
+        }
+
+        // ✅ delete post from DB
+        await NewsAndTourModel.findByIdAndDelete(_id);
+
+        // ✅ remove reference from EscortModel
+        await EscortModel.updateOne(
+            { escortId: post.escortId },
+            { $pull: { newsTour: _id } }
+        );
+
+        return response.status(200).json({
+            message: "Post deleted successfully",
+            success: true,
+            error: false
+        });
+
+    } catch (error) {
+
+        console.log("deleteNewsTourController error:", error);
+
+        return response.status(500).json({
+            message: error.message || "Server error",
             success: false,
             error: true
         });
