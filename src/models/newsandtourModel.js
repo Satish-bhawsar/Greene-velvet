@@ -6,6 +6,14 @@ const newsTourSchema = new mongoose.Schema({
         required: true,
         index: true
     },
+
+    country: {
+        type: String,
+        index: true
+    },
+
+    city: String,
+
     name: {
         type: String,
         required: true,

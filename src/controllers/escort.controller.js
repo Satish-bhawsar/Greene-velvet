@@ -1722,7 +1722,6 @@ export const fetchAllNewsTourController = async (request, response) => {
             .find(query)
             .sort({ createdAt: -1 })
             .limit(10)
-            .skip(page * 10)
 
         return response.status(200).json({
             message: "Posts fetched successfully",
