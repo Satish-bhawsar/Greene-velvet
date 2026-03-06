@@ -1499,7 +1499,7 @@ export const fetchEscortNewsTourcontroller = async (request, response) => {
         const posts = await NewsAndTourModel.find({
             escortId: escortId,
             status: "active"
-        }).sort({ createdAt: -1 });
+        }).sort({ createdAt: -1 }).limit(20);
 
         return response.status(200).json({
             message: "Posts fetched successfully",
@@ -1694,7 +1694,7 @@ export const deleteNewsTourController = async (request, response) => {
     }
 };
 
-// fetch All NewsTour posts
+// fetch All NewsTour posts by Country and city
 export const fetchAllNewsTourController = async (request, response) => {
     try {
 
@@ -1746,3 +1746,45 @@ export const fetchAllNewsTourController = async (request, response) => {
 
     }
 };
+
+// fetch selected NewsTour by post Id
+export const fetchSelectNewsTourController = async (request, response) => {
+    try {
+
+        const { _id } = request.query;
+
+        console.log("request.query: ", request.query);
+
+        if (!_id) {
+            return response.status(400).json({
+                message: "_id is required",
+                success: false,
+                error: true
+            });
+        }
+
+        console.log("query: ", query);
+
+        const post = await NewsAndTourModel.findById(_id);
+
+        console.log("post: ", post);
+
+        return response.status(200).json({
+            message: "Post fetched successfully",
+            success: true,
+            error: false,
+            data: post
+        });
+
+    } catch (error) {
+
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+

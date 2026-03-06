@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { advanceSearchController, changeMobilenumber, createNewsTourcontroller, deleteNewsTourController, escortdetailscontroller, escortLogincontroller, escortRatescontroller, escortServicescontroller, escortUploadverification, fetchAllNewsTourController, fetchEscortdetailscontroller, fetchEscortNewsTourcontroller, fetchFiltercityescortscontroller, fetchFilterHomescortscontroller, logoutEscortcontroller, registerEscortcontroller, sendOtpcontroller, updateHighlightscontroller, updateNewsTourController, uploadAvatarcontroller, uploadImagescontroller, uploadVideoscontroller, verifiedEscortcontroller, verifyEmailcontroller, verifyMobileotp } from '../controllers/escort.controller.js'
+import { advanceSearchController, changeMobilenumber, createNewsTourcontroller, deleteNewsTourController, escortdetailscontroller, escortLogincontroller, escortRatescontroller, escortServicescontroller, escortUploadverification, fetchAllNewsTourController, fetchEscortdetailscontroller, fetchEscortNewsTourcontroller, fetchFiltercityescortscontroller, fetchFilterHomescortscontroller, fetchSelectNewsTourController, logoutEscortcontroller, registerEscortcontroller, sendOtpcontroller, updateHighlightscontroller, updateNewsTourController, uploadAvatarcontroller, uploadImagescontroller, uploadVideoscontroller, verifiedEscortcontroller, verifyEmailcontroller, verifyMobileotp } from '../controllers/escort.controller.js'
 import upload from "../middleware/multer.js";
 import { protect } from "../middleware/auth.js";
 
@@ -45,6 +45,7 @@ escortRouter.patch("/update-newstour", upload.array("media", 3), updateNewsTourC
 escortRouter.post("/delete-newstour", deleteNewsTourController);
 escortRouter.get("/fetch-all-newstour", fetchAllNewsTourController);
 
+escortRouter.get("/fetch-selected-newstour", fetchSelectNewsTourController);
 
 
 export default escortRouter;
