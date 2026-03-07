@@ -460,6 +460,8 @@ export async function escortLogincontroller(request, response) {
             })
         }
 
+        console.log("escort details ", escort);
+
         if (escort.status !== "Active") {
             return response.status(400).json({
                 message: "Contact to admin",
