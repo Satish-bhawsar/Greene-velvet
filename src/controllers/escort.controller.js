@@ -493,6 +493,7 @@ export async function escortLogincontroller(request, response) {
             success: true,
             error: false,
             data: {
+                id: escort._id,
                 escortId: escort.escortId,
                 role: escort.role,
                 token: token
