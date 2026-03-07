@@ -20,6 +20,8 @@ import { uploadMediaCloudinary } from "../utils/uploadMediaCloudinary.js";
 import NewsAndTourModel from "../models/newsandtourModel.js";
 import { request } from "http";
 import { response } from "express";
+import NewstourLikesModel from "../models/newstourLikesModel.js";
+import NewstourCommentsModel from "../models/newstourCommentsModel.js";
 
 // Escort Register controll
 export async function registerEscortcontroller(request, response) {
@@ -1496,10 +1498,12 @@ export const fetchEscortNewsTourcontroller = async (request, response) => {
             });
         }
 
-        const posts = await NewsAndTourModel.find({
-            escortId: escortId,
-            status: "active"
-        }).sort({ createdAt: -1 }).limit(20);
+        const posts = await NewsAndTourModel
+            .find({ escortId: escortId, status: "active" })
+            .sort({ createdAt: -1 })
+            .limit(20)
+            .populate("newstourComments")
+            .populate("newstourLikes");
 
         return response.status(200).json({
             message: "Posts fetched successfully",
@@ -1725,7 +1729,9 @@ export const fetchAllNewsTourController = async (request, response) => {
         const posts = await NewsAndTourModel
             .find(query)
             .sort({ createdAt: -1 })
-            .limit(10)
+            .limit(24)
+            .populate("newstourComments")
+            .populate("newstourLikes");
 
         console.log("posts: ", posts);
 
@@ -1764,7 +1770,9 @@ export const fetchSelectNewsTourController = async (request, response) => {
         }
 
 
-        const post = await NewsAndTourModel.findById(_id);
+        const post = await NewsAndTourModel.findById(_id)
+            .populate("newstourComments")
+            .populate("newstourLikes");
 
         console.log("post: ", post);
 
@@ -1773,6 +1781,172 @@ export const fetchSelectNewsTourController = async (request, response) => {
             success: true,
             error: false,
             data: post
+        });
+
+    } catch (error) {
+
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+// Toggle NewsTour Like controller
+export const toggleNewstourLikeController = async (request, response) => {
+    try {
+
+        const { postId, userId } = request.body;
+
+        console.log("like request body : ", request.body);
+
+        if (!userId) {
+            return response.status(401).json({
+                message: "User not register",
+                success: false,
+                error: true
+            })
+        }
+
+        const existingLike = await NewstourLikesModel.findOne({
+            postId,
+            userId
+        });
+
+        console.log("existingLike : ", existingLike);
+
+        if (existingLike) {
+
+            await NewstourLikesModel.deleteOne({
+                _id: existingLike._id
+            });
+
+            await NewsAndTourModel.updateOne(
+                { _id: postId },
+                { $pull: { newstourLikes: existingLike._id } }
+            );
+
+            return response.status(200).json({
+                message: "Like removed",
+                success: true,
+                error: false
+            });
+        }
+
+        const like = await NewstourLikesModel.create({
+            postId,
+            userId
+        });
+
+        console.log("Like : ", like);
+
+        await NewsAndTourModel.updateOne(
+            { _id: postId },
+            { $push: { newstourLikes: like._id } }
+        );
+
+        response.status(201).json({
+            message: "Post liked",
+            success: true,
+            error: false,
+            like
+        });
+
+    } catch (error) {
+
+        response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+export const addNewstourCommentController = async (request, response) => {
+
+    try {
+
+        const { postId, userId, comment } = request.body;
+
+        console.log("comments request body : ", request.body);
+
+        if (!userId) {
+            return response.status(400).json({
+                message: "User not register",
+                success: false,
+                error: true
+            });
+        }
+
+        if (!comment) {
+            return response.status(400).json({
+                message: "please add comment",
+                success: false,
+                error: true
+            });
+        }
+
+        const newComment = await NewstourCommentsModel.create({
+            postId,
+            userId,
+            comment
+        });
+
+        console.log("comments : ", newComment);
+
+        await NewsAndTourModel.updateOne(
+            { _id: postId },
+            { $push: { newstourComments: newComment._id } }
+        );
+
+        return response.status(200).json({
+            message: "Comment added",
+            success: true,
+            error: false,
+            comment: newComment
+        });
+
+    } catch (error) {
+
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+export const getNewstourLikesUsersController = async (request, response) => {
+    try {
+
+        const { postId } = request.params;
+
+        console.log("request params : ", postId);
+
+        if (!postId) {
+            return response.status(400).json({
+                message: "news & tour id is missing",
+                success: false,
+                error: true
+            });
+        }
+
+        const likes = await NewstourLikesModel
+            .find({ postId })
+            .sort({ createdAt: -1 });
+
+        console.log("Likes response : ", likes);
+
+        return response.status(200).json({
+            message: "",
+            success: true,
+            error: false,
+            totalLikes: likes.length,
+            likes
         });
 
     } catch (error) {

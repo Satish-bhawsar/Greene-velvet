@@ -46,28 +46,19 @@ const newsTourSchema = new mongoose.Schema({
         }
     ],
 
-    comments: [
+    newstourComments: [
         {
-            userId: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "UserComments",
-            },
-            text: {
-                type: String,
-                required: true,
-            },
-            createdAt: {
-                type: Date,
-                default: Date.now,
-            },
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "NewstourComments",
         },
     ],
 
-
-    likes: {
-        type: Number,
-        default: 0
-    },
+    newstourLikes: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "NewstourLikes",
+        }
+    ],
 
     status: {
         type: String,
