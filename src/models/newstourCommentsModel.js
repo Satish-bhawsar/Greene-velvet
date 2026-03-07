@@ -23,19 +23,16 @@ const newstourCommentsSchema = new mongoose.Schema({
 
     comment: {
         type: String,
-        required: true,
         trim: true
     },
     media: [
         {
             url: {
                 type: String,
-                required: true
             },
             type: {
                 type: String,
                 enum: ["image", "video"],
-                required: true
             }
         }
     ],

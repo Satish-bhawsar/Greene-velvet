@@ -1880,7 +1880,7 @@ export const addNewstourCommentController = async (request, response) => {
         console.log("comments request body : ", request.body);
 
         if (!userId) {
-            return response.status(400).json({
+            return response.status(401).json({
                 message: "User not register",
                 success: false,
                 error: true
@@ -1888,7 +1888,7 @@ export const addNewstourCommentController = async (request, response) => {
         }
 
         if (!comment && !request.file) {
-            return response.status(400).json({
+            return response.status(402).json({
                 message: "please add comment or media",
                 success: false,
                 error: true
@@ -1917,7 +1917,7 @@ export const addNewstourCommentController = async (request, response) => {
             userId,
             userType,
             comment,
-            media: mediaData
+            media: mediaData ? [mediaData] : []
         });
 
         console.log("comments : ", newComment);
