@@ -1771,8 +1771,14 @@ export const fetchSelectNewsTourController = async (request, response) => {
 
 
         const post = await NewsAndTourModel.findById(_id)
-            .populate("newstourComments")
-            .populate("newstourLikes");
+            .populate("newstourLikes")
+            .populate({
+                path: "newstourComments",
+                populate: {
+                    path: "userId",
+                    select: "name avatar"
+                }
+            });
 
         console.log("post: ", post);
 
@@ -1869,7 +1875,7 @@ export const toggleNewstourLikeController = async (request, response) => {
 export const addNewstourCommentController = async (request, response) => {
     try {
 
-        const { postId, userId, comment } = request.body;
+        const { postId, userId, userType, comment } = request.body;
 
         console.log("comments request body : ", request.body);
 
@@ -1909,6 +1915,7 @@ export const addNewstourCommentController = async (request, response) => {
         const newComment = await NewstourCommentsModel.create({
             postId,
             userId,
+            userType,
             comment,
             media: mediaData
         });

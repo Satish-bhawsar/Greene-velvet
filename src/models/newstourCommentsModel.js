@@ -10,15 +10,35 @@ const newstourCommentsSchema = new mongoose.Schema({
     },
 
     userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        refPath: "userType"
+    },
+
+    userType: {
         type: String,
-        required: true
+        required: true,
+        enum: ["Client", "Escort"]
     },
 
     comment: {
         type: String,
         required: true,
         trim: true
-    }
+    },
+    media: [
+        {
+            url: {
+                type: String,
+                required: true
+            },
+            type: {
+                type: String,
+                enum: ["image", "video"],
+                required: true
+            }
+        }
+    ],
 
 }, { timestamps: true });
 

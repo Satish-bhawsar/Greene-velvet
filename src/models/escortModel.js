@@ -412,6 +412,6 @@ const EscortSchema = new mongoose.Schema({
     timestamps: true
 })
 
-const EscortModel = mongoose.model("escort", EscortSchema)
+const EscortModel = mongoose.model("Escort", EscortSchema)
 
 export default EscortModel;
