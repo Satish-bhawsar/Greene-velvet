@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { addNewstourCommentController, advanceSearchController, changeMobilenumber, createNewsTourcontroller, deleteNewsTourController, escortdetailscontroller, escortLogincontroller, escortRatescontroller, escortServicescontroller, escortUploadverification, fetchAllNewsTourController, fetchEscortdetailscontroller, fetchEscortNewsTourcontroller, fetchFiltercityescortscontroller, fetchFilterHomescortscontroller, fetchSelectedNewsTourComments, fetchSelectNewsTourController, logoutEscortcontroller, registerEscortcontroller, sendOtpcontroller, toggleNewstourLikeController, updateHighlightscontroller, updateNewsTourController, uploadAvatarcontroller, uploadImagescontroller, uploadVideoscontroller, verifiedEscortcontroller, verifyEmailcontroller, verifyMobileotp } from '../controllers/escort.controller.js'
+import { addBlogComment, addNewstourCommentController, advanceSearchController, changeMobilenumber, createBlog, createNewsTourcontroller, deleteNewsTourController, escortdetailscontroller, escortLogincontroller, escortRatescontroller, escortServicescontroller, escortUploadverification, fetchAllBlogs, fetchAllNewsTourController, fetchEscortdetailscontroller, fetchEscortNewsTourcontroller, fetchFiltercityescortscontroller, fetchFilterHomescortscontroller, fetchSelectBlog, fetchSelectedBlogComments, fetchSelectedNewsTourComments, fetchSelectNewsTourController, logoutEscortcontroller, registerEscortcontroller, sendOtpcontroller, toggleBlogLike, toggleNewstourLikeController, updateHighlightscontroller, updateNewsTourController, uploadAvatarcontroller, uploadImagescontroller, uploadVideoscontroller, verifiedEscortcontroller, verifyEmailcontroller, verifyMobileotp } from '../controllers/escort.controller.js'
 import upload from "../middleware/multer.js";
 import { protect } from "../middleware/auth.js";
 
@@ -44,17 +44,21 @@ escortRouter.get("/fetch-escort-newsandtour", fetchEscortNewsTourcontroller);
 escortRouter.patch("/update-newstour", upload.array("media", 3), updateNewsTourController);
 escortRouter.post("/delete-newstour", deleteNewsTourController);
 escortRouter.get("/fetch-all-newstour", fetchAllNewsTourController);
-
 escortRouter.get("/fetch-selected-newstour", fetchSelectNewsTourController);
-
-escortRouter.post("/create-newstour-comment", upload.single("media"), addNewstourCommentController)
-escortRouter.post("/create-newstour-like", toggleNewstourLikeController)
-
-escortRouter.get("/fetch-selected-newstour-comments", fetchSelectedNewsTourComments)
+escortRouter.post("/create-newstour-comment", upload.single("media"), addNewstourCommentController);
+escortRouter.post("/create-newstour-like", toggleNewstourLikeController);
+escortRouter.get("/fetch-selected-newstour-comments", fetchSelectedNewsTourComments);
 
 
+// Blog (full CURD operation)
+escortRouter.post("/create-blog", upload.array("media", 3),createBlog);
 
 
+escortRouter.get("/fetch-all-blogs",fetchAllBlogs)
+escortRouter.get("/fetch-selected-blog",fetchSelectBlog)
+escortRouter.post("/create-blog-like",toggleBlogLike)
+escortRouter.post("/create-blog-comment",upload.single("media"),addBlogComment)
+escortRouter.get("/fetch-selected-blog-comments",fetchSelectedBlogComments)
 
 
 export default escortRouter;

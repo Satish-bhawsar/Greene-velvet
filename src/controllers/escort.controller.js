@@ -22,7 +22,8 @@ import { request } from "http";
 import { response } from "express";
 import NewstourLikesModel from "../models/newstourLikesModel.js";
 import NewstourCommentsModel from "../models/newstourCommentsModel.js";
-import { error } from "console";
+import BlogModel from "../models/blogModel.js";
+import BlogCommentsModel from "../models/blogCommentsModel.js";
 
 // Escort Register controll
 export async function registerEscortcontroller(request, response) {
@@ -1391,6 +1392,8 @@ export const advanceSearchController = async (request, response) => {
     }
 };
 
+// ===================================================< News&Tour controlls >============================================================
+
 // NewsandTour 
 export const createNewsTourcontroller = async (request, response) => {
     try {
@@ -1882,8 +1885,6 @@ export const addNewstourCommentController = async (request, response) => {
 
         const { postId, userId, userType, comment } = request.body;
 
-        console.log("comments request body : ", request.body);
-
         if (!userId) {
             return response.status(401).json({
                 message: "User not register",
@@ -1925,8 +1926,6 @@ export const addNewstourCommentController = async (request, response) => {
             media: mediaData ? [mediaData] : []
         });
 
-        console.log("comments : ", newComment);
-
         // ================= UPDATE POST =================
         await NewsAndTourModel.updateOne(
             { _id: postId },
@@ -1941,8 +1940,6 @@ export const addNewstourCommentController = async (request, response) => {
         });
 
     } catch (error) {
-        console.log("error", error);
-        console.log("STACK:", error.stack);
 
         return response.status(500).json({
             message: error.message || "Server error",
@@ -1953,50 +1950,10 @@ export const addNewstourCommentController = async (request, response) => {
     }
 };
 
-export const getNewstourLikesUsersController = async (request, response) => {
-    try {
-
-        const { postId } = request.params;
-
-        console.log("request params : ", postId);
-
-        if (!postId) {
-            return response.status(400).json({
-                message: "news & tour id is missing",
-                success: false,
-                error: true
-            });
-        }
-
-        const likes = await NewstourLikesModel
-            .find({ postId })
-            .sort({ createdAt: -1 });
-
-        console.log("Likes response : ", likes);
-
-        return response.status(200).json({
-            message: "",
-            success: true,
-            error: false,
-            totalLikes: likes.length,
-            likes
-        });
-
-    } catch (error) {
-
-        return response.status(500).json({
-            message: error.message || "Server error",
-            success: false,
-            error: true
-        });
-
-    }
-};
-
+// fetch selected news and tour comments
 export const fetchSelectedNewsTourComments = async (request, response) => {
     try {
         const { postId } = request.query;
-        console.log("fetch comments query: ", request.query);
 
         if (!postId) {
             return response.status(400).json({
@@ -2013,8 +1970,6 @@ export const fetchSelectedNewsTourComments = async (request, response) => {
                 path: "userId",
                 select: "name avatar"
             });
-
-        console.log("fetch comments postComments: ", postComments);
 
         return response.status(200).json({
             message: "Fetch comments",
@@ -2033,3 +1988,385 @@ export const fetchSelectedNewsTourComments = async (request, response) => {
 };
 
 
+// ==============================================< Blog controlls >==============================================
+
+// Create Blog
+export const createBlog = async (request, response) => {
+    try {
+
+        const { escortId, name, city, country, title, description } = request.body;
+
+
+        if (!escortId || !title || !description) {
+            return response.status(400).json({
+                message: "escortId, title and description are required",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ✅ file validation
+        if (!request.files || request.files.length === 0) {
+            return response.status(400).json({
+                message: "At least 1 media file required",
+                success: false,
+                error: true,
+            });
+        }
+
+        if (request.files.length > 3) {
+            return response.status(400).json({
+                message: "Maximum 3 media files allowed",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ✅ check escort exist
+        const escort = await EscortModel.findOne({ escortId });
+
+        if (!escort) {
+            return response.status(404).json({
+                message: "Escort not found",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ✅ upload media to cloudinary
+        const mediaUploads = await Promise.all(
+            request.files.map(async (file) => {
+
+                const result = await uploadMediaCloudinary(
+                    file,
+                    "blog/post"
+                );
+
+                return {
+                    url: result.secure_url,
+                    type: file.mimetype.startsWith("video") ? "video" : "image"
+                };
+            })
+        );
+
+        // ✅ create post
+        const post = await BlogModel.create({
+            escortId,
+            city,
+            country,
+            name,
+            title,
+            description,
+            status: "active",
+            media: mediaUploads
+        });
+
+        console.log("post :", post);
+
+        // ✅ push post id into escort model
+        await EscortModel.findOneAndUpdate(
+            { escortId },
+            { $push: { newsTour: post._id } }
+        );
+
+
+        console.log("blog Data:", post);
+
+        return response.status(201).json({
+            message: "News & Tour post created successfully",
+            success: true,
+            error: false,
+            data: post
+        });
+
+
+    } catch (error) {
+
+        return response.status(500).json({
+            message: error.message || "Server Error",
+            success: false,
+            error: true
+        });
+    }
+};
+
+// fetch All NewsTour posts by Country and city
+export const fetchAllBlogs = async (request, response) => {
+    try {
+
+        const { country, city } = request.query;
+
+        console.log("request.query: ", request.query);
+
+        if (!country) {
+            return response.status(400).json({
+                message: "Country is required",
+                success: false,
+                error: true
+            });
+        }
+
+        let query = {
+            status: "active",
+            country: country
+        };
+
+        // ✅ city filter only when provided
+        if (city) {
+            query.city = city;
+        }
+
+        console.log("query: ", query);
+
+        const posts = await BlogModel
+            .find(query)
+            .sort({ createdAt: -1 })
+            .limit(24)
+            .populate("blogComments")
+            .populate("blogLikes");
+
+        console.log("posts: ", posts);
+
+        return response.status(200).json({
+            message: "Blogs fetched successfully",
+            success: true,
+            error: false,
+            data: posts
+        });
+
+    } catch (error) {
+
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+// fetch selected NewsTour by post Id
+export const fetchSelectBlog = async (request, response) => {
+    try {
+
+        const { _id } = request.query;
+
+        console.log("request.query: ", request.query);
+
+        if (!_id) {
+            return response.status(400).json({
+                message: "_id is required",
+                success: false,
+                error: true
+            });
+        }
+
+        const post = await BlogModel.findById(_id)
+            .populate("blogLikes")
+            .populate({
+                path: "blogComments",
+                populate: {
+                    path: "userId",
+                    select: "name avatar"
+                }
+            });
+
+        console.log("post: ", post);
+
+        return response.status(200).json({
+            message: "Blog fetched successfully",
+            success: true,
+            error: false,
+            data: post
+        });
+
+    } catch (error) {
+
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+// Toggle NewsTour Like controller
+export const toggleBlogLike = async (request, response) => {
+    try {
+
+        const { postId, userId } = request.body;
+
+        console.log("like request body : ", request.body);
+
+        if (!userId) {
+            return response.status(401).json({
+                message: "User not register",
+                success: false,
+                error: true
+            })
+        }
+
+        const existingLike = await BlogModel.findOne({
+            postId,
+            userId
+        });
+
+        console.log("existingLike : ", existingLike);
+
+        if (existingLike) {
+
+            await BlogModel.deleteOne({
+                _id: existingLike._id
+            });
+
+            await BlogModel.updateOne(
+                { _id: postId },
+                { $pull: { blogLikes: existingLike._id } }
+            );
+
+            return response.status(200).json({
+                message: "Like removed",
+                success: true,
+                error: false
+            });
+
+        }
+
+        const like = await BlogModel.create({
+            postId,
+            userId
+        });
+
+        console.log("Like : ", like);
+
+        await BlogModel.updateOne(
+            { _id: postId },
+            { $push: { blogLikes: like._id } }
+        );
+
+        response.status(201).json({
+            message: "Post liked",
+            success: true,
+            error: false,
+            like
+        });
+
+    } catch (error) {
+
+        response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+// add NewsandTour Comments
+export const addBlogComment = async (request, response) => {
+    try {
+
+        const { postId, userId, userType, comment } = request.body;
+
+        if (!userId) {
+            return response.status(401).json({
+                message: "User not register",
+                success: false,
+                error: true
+            });
+        }
+
+        if (!comment && !request.file) {
+            return response.status(402).json({
+                message: "please add comment or media",
+                success: false,
+                error: true
+            });
+        }
+
+        let mediaData = null;
+
+        // ================= MEDIA UPLOAD =================
+        if (request.file) {
+
+            const uploadResult = await uploadMediaCloudinary(
+                request.file,
+                "escort-app/blog/comments"
+            );
+
+            mediaData = {
+                url: uploadResult.secure_url,
+                type: uploadResult.resource_type === "video" ? "video" : "image"
+            };
+        }
+
+        // ================= CREATE COMMENT =================
+        const newComment = await BlogCommentsModel.create({
+            postId,
+            userId,
+            userType,
+            comment,
+            media: mediaData ? [mediaData] : []
+        });
+
+        // ================= UPDATE POST =================
+        await BlogModel.updateOne(
+            { _id: postId },
+            { $push: { blogComments: newComment._id } }
+        );
+
+        return response.status(200).json({
+            message: "Comment added",
+            success: true,
+            error: false,
+            comment: newComment
+        });
+
+    } catch (error) {
+
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+// fetch selected news and tour comments
+export const fetchSelectedBlogComments = async (request, response) => {
+    try {
+        const { postId } = request.query;
+
+        if (!postId) {
+            return response.status(400).json({
+                message: "postId required...!",
+                success: false,
+                error: true,
+            });
+        }
+
+        const postComments = await BlogCommentsModel
+            .find({ postId: postId })
+            .sort({ createdAt: -1 })
+            .populate({
+                path: "userId",
+                select: "name avatar"
+            });
+
+        return response.status(200).json({
+            message: "Fetch comments",
+            success: true,
+            error: false,
+            data: postComments
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true,
+        });
+    }
+};

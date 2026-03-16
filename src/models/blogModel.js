@@ -1,0 +1,74 @@
+import mongoose from "mongoose";
+
+const blogSchema = new mongoose.Schema({
+    escortId: {
+        type: String,
+        required: true,
+        index: true
+    },
+
+    country: {
+        type: String,
+        index: true
+    },
+
+    city: String,
+
+    name: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+
+    title: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+
+    description: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+
+    media: [
+        {
+            url: {
+                type: String,
+                required: true
+            },
+            type: {
+                type: String,
+                enum: ["image", "video"],
+                required: true
+            }
+        }
+    ],
+
+    blogComments: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "BlogComments",
+        },
+    ],
+
+    blogLikes: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "BlogLikes",
+        }
+    ],
+
+    status: {
+        type: String,
+        enum: ["active", "inactive", "blocked"],
+        default: "active",
+    },
+}, {
+    timestamps: true,
+})
+
+const BlogModel = mongoose.model("blog", blogSchema);
+
+export default BlogModel;
