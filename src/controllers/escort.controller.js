@@ -2172,8 +2172,12 @@ export const fetchSelectBlog = async (request, response) => {
 
         const post = await BlogModel
             .findById(_id)
-            .populate("blogLikes")
-            .populate("blogComments")
+            .populate({
+                path : "blogLikes"
+            })
+            .populate({
+                path: "blogComments"
+            })
             .populate({
                 path: "userId",
                 select: "name avatar"
