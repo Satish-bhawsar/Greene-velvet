@@ -21,6 +21,6 @@ blogLikesSchema.index({
 }, { unique: true });
 
 
-const BlogLikesModel = mongoose.model("BlogLikes", blogLikesSchema);
+const BlogLikesModel = mongoose.model("blogLikes", blogLikesSchema);
 
 export default BlogLikesModel;

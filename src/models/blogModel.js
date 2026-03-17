@@ -61,14 +61,14 @@ const blogSchema = new mongoose.Schema({
     blogComments: [
         {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "BlogComments",
+            ref: "blogComments",
         },
     ],
 
     blogLikes: [
         {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "BlogLikes",
+            ref: "blogLikes",
         }
     ],
 
