@@ -1395,7 +1395,7 @@ export const advanceSearchController = async (request, response) => {
 
 // ===================================================< News&Tour controlls >============================================================
 
-// NewsandTour 
+// Add NewsandTour 
 export const createNewsTourcontroller = async (request, response) => {
     try {
 
@@ -2090,7 +2090,183 @@ export const createBlog = async (request, response) => {
     }
 };
 
-// fetch All NewsTour posts by Country and city
+// update Blog
+export const updateBlog = async (request, response) => {
+    try {
+
+        const { _id, title, description } = request.body;
+
+        console.log("request.body: ", request.body);
+
+        if (!_id) {
+            return response.status(400).json({
+                message: "Post _id required",
+                success: false,
+                error: true
+            });
+        }
+
+        const post = await BlogModel.findById(_id);
+
+        console.log("post: ", post);
+
+        if (!post) {
+            return response.status(404).json({
+                message: "Post not found",
+                success: false,
+                error: true
+            });
+        }
+
+        let mediaUploads = post.media;
+
+        if (request.files && request.files?.length > 0) {
+
+            if (request.files.length > 1) {
+                return response.status(400).json({
+                    message: "Maximum 1 media allowed",
+                    success: false,
+                    error: true
+                });
+            }
+
+            // delete old media from cloudinary
+            if (post.media && post.media?.length > 0) {
+                for (let m of post.media) {
+
+                    if (m.public_id) {
+                        await cloudinary.uploader.destroy(
+                            m.public_id,
+                            {
+                                resource_type: m.type === "video" ? "video" : "image"
+                            }
+                        );
+                    }
+                }
+            }
+
+            // upload new media
+            mediaUploads = await Promise.all(
+                request.files.map(async (file) => {
+
+                    const result = await uploadMediaCloudinary(
+                        file,
+                        "blog/post"
+                    );
+
+                    return {
+                        url: result.secure_url,
+                        public_id: result.public_id,
+                        type: result.resource_type || (
+                            file.mimetype.startsWith("video")
+                                ? "video"
+                                : "image"
+                        )
+                    };
+                })
+            );
+        }
+
+        // update post
+        const updatedPost = await BlogModel.findByIdAndUpdate(
+            _id,
+            {
+                title: title || post.title,
+                description: description || post.description,
+                media: mediaUploads
+            },
+            { new: true }
+        );
+
+        return response.status(200).json({
+            message: "Post updated successfully",
+            success: true,
+            error: false,
+            data: updatedPost
+        });
+
+    } catch (error) {
+
+        console.log("update blog error:", error);
+
+        return response.status(500).json({
+            message: error.message || "server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+// Delete NewsTour
+export const deleteBlog = async (request, response) => {
+    try {
+
+        const { _id } = request.body;
+
+        if (!_id) {
+            return response.status(400).json({
+                message: "Post _id required",
+                success: false,
+                error: true
+            });
+        }
+
+        const post = await BlogModel.findById(_id);
+
+        if (!post) {
+            return response.status(404).json({
+                message: "Blog not found",
+                success: false,
+                error: true
+            });
+        }
+
+        // ✅ Delete media from cloudinary
+        if (post.media && post.media.length > 0) {
+
+            for (let m of post.media) {
+
+                if (m.public_id) {
+                    await cloudinary.uploader.destroy(
+                        m.public_id,
+                        {
+                            resource_type: m.type === "video" ? "video" : "image"
+                        }
+                    );
+                }
+            }
+        }
+
+        // ✅ delete post from DB
+        await BlogModel.findByIdAndDelete(_id);
+
+        // ✅ remove reference from EscortModel
+        await EscortModel.updateOne(
+            { escortId: post.escortId },
+            { $pull: { blog: _id } }
+        );
+
+        return response.status(200).json({
+            message: "Post deleted successfully",
+            success: true,
+            error: false
+        });
+
+    } catch (error) {
+
+        console.log("deleteNewsTourController error:", error);
+
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true
+        });
+
+    }
+};
+
+// fetch All Blog posts by Country and city
 export const fetchAllBlogs = async (request, response) => {
     try {
 
@@ -2155,8 +2331,7 @@ export const fetchAllBlogs = async (request, response) => {
     }
 };
 
-// fetch selected NewsTour by post Id
-
+// fetch selected Blog by post Id
 export const fetchSelectBlog = async (request, response) => {
     try {
 
@@ -2176,7 +2351,7 @@ export const fetchSelectBlog = async (request, response) => {
         const post = await BlogModel
             .findById(_id)
             .populate({
-                path : "blogLikes"
+                path: "blogLikes"
             })
             .populate({
                 path: "blogComments"
@@ -2214,10 +2389,52 @@ export const fetchSelectBlog = async (request, response) => {
     }
 };
 
+// fetch all blogs of escort
+export const fetchEscortBlog = async (request, response) => {
+    try {
+        const { escortId } = request.query;
 
+        if (!escortId) {
+            return response.status(400).json({
+                message: "EscortId not found",
+                success: false,
+                error: true,
+            });
+        }
 
+        const posts = await BlogModel
+            .find({ escortId: escortId, status: "active" })
+            .sort({ createdAt: -1 })
+            .limit(15)
+            .populate({
+                path: "userId",
+                select: "name avatar"
+            })
+            .populate({
+                path: "blogComments"
+            })
+            .populate({
+                path: "blogLikes"
+            });
 
-// Toggle NewsTour Like controller
+        return response.status(200).json({
+            message: "Posts fetched successfully",
+            success: true,
+            error: false,
+            data: posts
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || "Server Error",
+            success: false,
+            error: true
+        })
+    }
+
+}
+
+// Toggle Blog Like controller
 export const toggleBlogLike = async (request, response) => {
     try {
 
@@ -2233,7 +2450,7 @@ export const toggleBlogLike = async (request, response) => {
             })
         }
 
-        const existingLike = await BlogModel.findOne({
+        const existingLike = await BlogLikesModel.findOne({
             postId,
             userId
         });
@@ -2242,7 +2459,7 @@ export const toggleBlogLike = async (request, response) => {
 
         if (existingLike) {
 
-            await BlogModel.deleteOne({
+            await BlogLikesModel.deleteOne({
                 _id: existingLike._id
             });
 
@@ -2259,7 +2476,7 @@ export const toggleBlogLike = async (request, response) => {
 
         }
 
-        const like = await BlogModel.create({
+        const like = await BlogLikesModel.create({
             postId,
             userId
         });
@@ -2279,6 +2496,7 @@ export const toggleBlogLike = async (request, response) => {
         });
 
     } catch (error) {
+        console.log("like error: ", error);
 
         response.status(500).json({
             message: error.message || "Server error",
@@ -2289,7 +2507,7 @@ export const toggleBlogLike = async (request, response) => {
     }
 };
 
-// add NewsandTour Comments
+// add Blog Comments
 export const addBlogComment = async (request, response) => {
     try {
 
@@ -2360,7 +2578,7 @@ export const addBlogComment = async (request, response) => {
     }
 };
 
-// fetch selected news and tour comments
+// fetch selected Blog comments
 export const fetchSelectedBlogComments = async (request, response) => {
     try {
         const { postId } = request.query;
