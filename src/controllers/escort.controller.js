@@ -2290,14 +2290,6 @@ export const blockBlogComments = async (request, response) => {
             });
         }
 
-        // ✅ OWNER CHECK (IMPORTANT 🔥)
-        if (blog.userId.toString() !== req.userId) {
-            return res.status(403).json({
-                success: false,
-                message: "Unauthorized"
-            });
-        }
-
         // ✅ TOGGLE LOGIC
         blog.isCommentsBlocked = !blog.isCommentsBlocked;
 
