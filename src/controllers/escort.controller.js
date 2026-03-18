@@ -2688,7 +2688,8 @@ export const addBooking = async (request, response) => {
             service,
             amount,
             paymentStatus,
-            address
+            address,
+            callType
         } = request.body;
 
         // ✅ Basic validation
@@ -2813,7 +2814,8 @@ export const updateBooking = async (request, response) => {
             service,
             amount,
             paymentStatus,
-            address
+            address,
+            callType
         } = request.body;
 
         if (!_id) {

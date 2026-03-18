@@ -42,6 +42,10 @@ const bookingSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    callType: {
+        type: String,
+        enum: ["incall", "outcall", "fmty"],
+    },
 
     // Status
     status: {
@@ -59,7 +63,7 @@ const bookingSchema = new mongoose.Schema({
     service: {
         type: String,
     },
-    
+
     address: {
         type: String,
     },
