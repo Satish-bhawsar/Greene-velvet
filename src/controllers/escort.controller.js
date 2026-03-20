@@ -2678,18 +2678,14 @@ export const addBooking = async (request, response) => {
         const {
             userId,
             escortId,
-            clientName,
             date,
             startTime,
             endTime,
             isAllDay,
             status,
             title,
-            service,
-            amount,
-            paymentStatus,
-            address,
-            callType
+            notAvailable,
+            type,
         } = request.body;
 
         // ✅ Basic validation
@@ -2729,17 +2725,14 @@ export const addBooking = async (request, response) => {
         const booking = await BookingModel.create({
             userId,
             escortId,
-            clientName,
             date,
             startTime: start,
             endTime: end,
             isAllDay,
             status,
             title,
-            service,
-            amount,
-            paymentStatus,
-            address
+            notAvailable,
+            type
         });
 
         return response.status(201).json({
@@ -2811,11 +2804,8 @@ export const updateBooking = async (request, response) => {
             isAllDay,
             status,
             title,
-            service,
-            amount,
-            paymentStatus,
-            address,
-            callType
+            notAvailable,
+            type
         } = request.body;
 
         if (!_id) {
@@ -2868,10 +2858,8 @@ export const updateBooking = async (request, response) => {
         booking.isAllDay = isAllDay ?? booking.isAllDay;
         booking.status = status || booking.status;
         booking.title = title || booking.title;
-        booking.service = service || booking.service;
-        booking.amount = amount ?? booking.amount;
-        booking.paymentStatus = paymentStatus || booking.paymentStatus;
-        booking.address = address || booking.address;
+        booking.notAvailable = notAvailable || booking.notAvailable;
+        booking.type = type || booking.type;
 
         await booking.save();
 

@@ -15,11 +15,6 @@ const bookingSchema = new mongoose.Schema({
         index: true
     },
 
-    clientName: {
-        type: String,
-        required: true,
-    },
-
     // Booking Date
     date: {
         type: String,   // "YYYY-MM-DD"
@@ -42,16 +37,20 @@ const bookingSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    callType: {
+    notAvailable: {
+        type: Boolean,
+        default: false
+    },
+    type: {
         type: String,
-        enum: ["incall", "outcall", "fmty"],
+        enum: ["booking", "availability"],
     },
 
     // Status
     status: {
         type: String,
-        enum: ["Pending", "confirmed", "cancelled", "completed"],
-        default: "confirmed"
+        enum: ["active", "completed", "cancle"],
+        default: "active"
     },
 
     // Optional Note / Title
@@ -60,26 +59,6 @@ const bookingSchema = new mongoose.Schema({
         default: ""
     },
 
-    service: {
-        type: String,
-    },
-
-    address: {
-        type: String,
-    },
-
-    // Payment (optional future use)
-    amount: {
-        type: Number,
-        default: 0
-    },
-
-    // Payment Status
-    paymentStatus: {
-        type: String,
-        enum: ["pending", "paid", "failed"],
-        default: "pending"
-    }
 
 }, {
     timestamps: true
