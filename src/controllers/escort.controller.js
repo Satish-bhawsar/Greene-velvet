@@ -3130,282 +3130,266 @@ export const addTour = async (request, response) => {
 
 // fetching tour by date and status
 export const getToursByDate = async (request, response) => {
-  try {
-    const { escortId, date, status } = request.query;
+    try {
+        const { escortId, startDate, endDate, status } = request.query;
 
-    if (!escortId || !date) {
-      return response.status(400).json({
-        message: "escortId and date are required",
-        success: false,
-        error: true,
-      });
+        if (!escortId || !startDate || !endDate) {
+            return response.status(400).json({
+                message: "escortId and date are required",
+                success: false,
+                error: true,
+            });
+        }
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        const tours = await TourModel.find({
+            escortId,
+            startDate: { $lte: end },
+            endDate: { $gte: start },
+        });
+
+        return response.status(200).json({
+            message: "Tours fetched for selected date",
+            success: true,
+            error: false,
+            count: tours.length,
+            data: tours,
+        });
+
+    } catch (error) {
+        console.error("Get Tours By Date Error:", error);
+
+        return response.status(500).json({
+            message: error.message || "Internal server error",
+            success: false,
+            error: true,
+        });
     }
-
-    // 🔥 Always parse safely
-    const selectedDate = new Date(date);
-
-    if (isNaN(selectedDate)) {
-      return response.status(400).json({
-        message: "Invalid date format",
-        success: false,
-        error: true,
-      });
-    }
-
-    // 🔥 FIX timezone safe range
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setUTCHours(23, 59, 59, 999);
-
-    // 🔥 OVERLAP LOGIC (CORRECT)
-    const tours = await TourModel.find({
-      escortId,
-      startDate: { $lte: endOfDay },
-      endDate: { $gte: startOfDay },
-    }).sort({ startDate: 1 });
-
-    return response.status(200).json({
-      message: "Tours fetched for selected date",
-      success: true,
-      error: false,
-      count: tours.length,
-      data: tours,
-    });
-
-  } catch (error) {
-    console.error("Get Tours By Date Error:", error);
-
-    return response.status(500).json({
-      message: error.message || "Internal server error",
-      success: false,
-      error: true,
-    });
-  }
 };
 // update tour
 export const updateTour = async (request, response) => {
-  try {
-    const { escortId , _id, city, startDate, endDate, tourNotes } = request.body;
+    try {
+        const { escortId, _id, city, startDate, endDate, tourNotes } = request.body;
 
-    // 🔴 Check tourId
-    if (!_id) {
-      return response.status(400).json({
-        message: "TourId is required",
-        success: false,
-        error: true,
-      });
+        // 🔴 Check tourId
+        if (!_id) {
+            return response.status(400).json({
+                message: "TourId is required",
+                success: false,
+                error: true,
+            });
+        }
+
+        // 🔍 Existing tour check
+        const existingTour = await TourModel.findById(_id);
+
+        if (!existingTour) {
+            return response.status(404).json({
+                message: "Tour not found",
+                success: false,
+                error: true,
+            });
+        }
+
+        // 🔴 Convert dates if provided
+        const start = startDate ? new Date(startDate) : existingTour.startDate;
+        const end = endDate ? new Date(endDate) : existingTour.endDate;
+
+        // ❗ Invalid date check
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return response.status(400).json({
+                message: "Invalid date format",
+                success: false,
+                error: true,
+            });
+        }
+
+        // 🔴 Date validation
+        if (start > end) {
+            return response.status(400).json({
+                message: "Start date cannot be after end date",
+                success: false,
+                error: true,
+            });
+        }
+
+        // 🔥 Overlap check (exclude current tour)
+        const overlapTour = await TourModel.findOne({
+            escortId: escortId || existingTour.escortId,
+            _id: { $ne: _id }, // ❗ exclude current
+            $or: [
+                {
+                    startDate: { $lte: end },
+                    endDate: { $gte: start },
+                },
+            ],
+        });
+
+        if (overlapTour) {
+            return response.status(400).json({
+                message: "Updated dates overlap with another tour",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ✅ Update fields
+        existingTour.city = city || existingTour.city;
+        existingTour.startDate = start;
+        existingTour.endDate = end;
+        existingTour.tourNotes = tourNotes ?? existingTour.tourNotes;
+        existingTour.escortId = escortId || existingTour.escortId;
+
+        const updatedTour = await existingTour.save();
+
+        return response.status(200).json({
+            message: "Tour updated successfully",
+            success: true,
+            error: false,
+            data: updatedTour,
+        });
+
+    } catch (error) {
+        console.error("Update Tour Error:", error);
+
+        return response.status(500).json({
+            message: error.message || "Internal server error",
+            success: false,
+            error: true,
+        });
     }
-
-    // 🔍 Existing tour check
-    const existingTour = await TourModel.findById(_id);
-
-    if (!existingTour) {
-      return response.status(404).json({
-        message: "Tour not found",
-        success: false,
-        error: true,
-      });
-    }
-
-    // 🔴 Convert dates if provided
-    const start = startDate ? new Date(startDate) : existingTour.startDate;
-    const end = endDate ? new Date(endDate) : existingTour.endDate;
-
-    // ❗ Invalid date check
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return response.status(400).json({
-        message: "Invalid date format",
-        success: false,
-        error: true,
-      });
-    }
-
-    // 🔴 Date validation
-    if (start > end) {
-      return response.status(400).json({
-        message: "Start date cannot be after end date",
-        success: false,
-        error: true,
-      });
-    }
-
-    // 🔥 Overlap check (exclude current tour)
-    const overlapTour = await TourModel.findOne({
-      escortId: escortId || existingTour.escortId,
-      _id: { $ne: _id }, // ❗ exclude current
-      $or: [
-        {
-          startDate: { $lte: end },
-          endDate: { $gte: start },
-        },
-      ],
-    });
-
-    if (overlapTour) {
-      return response.status(400).json({
-        message: "Updated dates overlap with another tour",
-        success: false,
-        error: true,
-      });
-    }
-
-    // ✅ Update fields
-    existingTour.city = city || existingTour.city;
-    existingTour.startDate = start;
-    existingTour.endDate = end;
-    existingTour.tourNotes = tourNotes ?? existingTour.tourNotes;
-    existingTour.escortId = escortId || existingTour.escortId;
-
-    const updatedTour = await existingTour.save();
-
-    return response.status(200).json({
-      message: "Tour updated successfully",
-      success: true,
-      error: false,
-      data: updatedTour,
-    });
-
-  } catch (error) {
-    console.error("Update Tour Error:", error);
-
-    return response.status(500).json({
-      message: error.message || "Internal server error",
-      success: false,
-      error: true,
-    });
-  }
 };
 
 // delete tour
 export const deleteTour = async (request, response) => {
-  try {
-    const { _id, userId } = request.body;
+    try {
+        const { _id, userId } = request.body;
 
-    // 🔴 Check tourId
-    if (!_id) {
-      return response.status(400).json({
-        message: "TourId is required",
-        success: false,
-        error: true,
-      });
+        // 🔴 Check tourId
+        if (!_id) {
+            return response.status(400).json({
+                message: "TourId is required",
+                success: false,
+                error: true,
+            });
+        }
+
+        // 🔍 Check if tour exists
+        const existingTour = await TourModel.findById(_id);
+
+        if (!existingTour) {
+            return response.status(404).json({
+                message: "Tour not found",
+                success: false,
+                error: true,
+            });
+        }
+
+        // 🔐 Optional: Ownership check (VERY IMPORTANT)
+        if (existingTour.userId.toString() !== request.userId) {
+            return response.status(403).json({
+                message: "Unauthorized to delete this tour",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ❗ Optional: Prevent delete if active
+        const today = new Date();
+        if (existingTour.startDate <= today && existingTour.endDate >= today) {
+            return response.status(400).json({
+                message: "Cannot delete an ongoing tour",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ✅ Delete
+        await TourModel.findByIdAndDelete(_id);
+
+        return response.status(200).json({
+            message: "Tour deleted successfully",
+            success: true,
+            error: false,
+        });
+
+    } catch (error) {
+        console.error("Delete Tour Error:", error);
+
+        return response.status(500).json({
+            message: error.message || "Internal server error",
+            success: false,
+            error: true,
+        });
     }
-
-    // 🔍 Check if tour exists
-    const existingTour = await TourModel.findById(_id);
-
-    if (!existingTour) {
-      return response.status(404).json({
-        message: "Tour not found",
-        success: false,
-        error: true,
-      });
-    }
-
-    // 🔐 Optional: Ownership check (VERY IMPORTANT)
-    if (existingTour.userId.toString() !== request.userId) {
-      return response.status(403).json({
-        message: "Unauthorized to delete this tour",
-        success: false,
-        error: true,
-      });
-    }
-
-    // ❗ Optional: Prevent delete if active
-    const today = new Date();
-    if (existingTour.startDate <= today && existingTour.endDate >= today) {
-      return response.status(400).json({
-        message: "Cannot delete an ongoing tour",
-        success: false,
-        error: true,
-      });
-    }
-
-    // ✅ Delete
-    await TourModel.findByIdAndDelete(_id);
-
-    return response.status(200).json({
-      message: "Tour deleted successfully",
-      success: true,
-      error: false,
-    });
-
-  } catch (error) {
-    console.error("Delete Tour Error:", error);
-
-    return response.status(500).json({
-      message: error.message || "Internal server error",
-      success: false,
-      error: true,
-    });
-  }
 };
 
 // cancel tour
 export const cancelTour = async (request, response) => {
-  try {
-    const { _id, userId } = request.body;
+    try {
+        const { _id, userId } = request.body;
 
-    // 🔴 validation
-    if (!_id) {
-      return response.status(400).json({
-        message: "TourId is required",
-        success: false,
-        error: true,
-      });
+        // 🔴 validation
+        if (!_id) {
+            return response.status(400).json({
+                message: "TourId is required",
+                success: false,
+                error: true,
+            });
+        }
+
+        // 🔍 find tour
+        const existingTour = await TourModel.findById(_id);
+
+        if (!existingTour) {
+            return response.status(404).json({
+                message: "Tour not found",
+                success: false,
+                error: true,
+            });
+        }
+
+        // 🔐 ownership check
+        if (existingTour.userId.toString() !== request.userId) {
+            return response.status(403).json({
+                message: "Unauthorized to cancel this tour",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ❗ already cancelled check
+        if (existingTour.status === "cancelled") {
+            return response.status(400).json({
+                message: "Tour is already cancelled",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ✅ update status
+        existingTour.status = "cancelled";
+
+        const updatedTour = await existingTour.save();
+
+        return response.status(200).json({
+            message: "Tour cancelled successfully",
+            success: true,
+            error: false,
+            data: updatedTour,
+        });
+
+    } catch (error) {
+        console.error("Cancel Tour Error:", error);
+
+        return response.status(500).json({
+            message: error.message || "Internal server error",
+            success: false,
+            error: true,
+        });
     }
-
-    // 🔍 find tour
-    const existingTour = await TourModel.findById(_id);
-
-    if (!existingTour) {
-      return response.status(404).json({
-        message: "Tour not found",
-        success: false,
-        error: true,
-      });
-    }
-
-    // 🔐 ownership check
-    if (existingTour.userId.toString() !== request.userId) {
-      return response.status(403).json({
-        message: "Unauthorized to cancel this tour",
-        success: false,
-        error: true,
-      });
-    }
-
-    // ❗ already cancelled check
-    if (existingTour.status === "cancelled") {
-      return response.status(400).json({
-        message: "Tour is already cancelled",
-        success: false,
-        error: true,
-      });
-    }
-
-    // ✅ update status
-    existingTour.status = "cancelled";
-
-    const updatedTour = await existingTour.save();
-
-    return response.status(200).json({
-      message: "Tour cancelled successfully",
-      success: true,
-      error: false,
-      data: updatedTour,
-    });
-
-  } catch (error) {
-    console.error("Cancel Tour Error:", error);
-
-    return response.status(500).json({
-      message: error.message || "Internal server error",
-      success: false,
-      error: true,
-    });
-  }
 };
 
 // ==============================================================================================================================
