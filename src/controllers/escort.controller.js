@@ -23,9 +23,9 @@ import NewstourCommentsModel from "../models/newstourCommentsModel.js";
 import BlogModel from "../models/blogModel.js";
 import BlogCommentsModel from "../models/blogCommentsModel.js";
 import BlogLikesModel from "../models/blogLikesModel.js";
-import { request } from "http";
-import { response } from "express";
-import { BookingModel } from "../models/bookingModel.js";
+import BookingModel from "../models/bookingModel.js";
+import TourModel from "../models/tourModel.js";
+import { error } from "console";
 
 
 
@@ -2673,103 +2673,103 @@ export const fetchSelectedBlogComments = async (request, response) => {
 
 // add booking
 export const addBooking = async (request, response) => {
-  try {
-    const {
-      userId,
-      escortId,
-      date,
-      startTime,
-      endTime,
-      isAllDay,
-      status,
-      title,
-      notAvailable,
-      type, // booking | availability
-    } = request.body;
+    try {
+        const {
+            userId,
+            escortId,
+            date,
+            startTime,
+            endTime,
+            isAllDay,
+            status,
+            title,
+            notAvailable,
+            type, // booking | availability
+        } = request.body;
 
-    // ✅ Basic validation
-    if (!userId || !escortId || !date || !type) {
-      return response.status(400).json({
-        message: "Required fields missing",
-        success: false,
-        error: true,
-      });
+        // ✅ Basic validation
+        if (!userId || !escortId || !date || !type) {
+            return response.status(400).json({
+                message: "Required fields missing",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ✅ Time Handling
+        let start = startTime;
+        let end = endTime;
+
+        if (isAllDay || notAvailable) {
+            start = "00:00";
+            end = "23:59";
+        }
+
+        // ✅ Time validation (only when needed)
+        if (!isAllDay && !notAvailable && start >= end) {
+            return response.status(400).json({
+                message: "End time must be greater than start time",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ✅ Conflict Check (IMPORTANT LOGIC 🔥)
+        let conflictQuery = {
+            escortId,
+            date,
+            startTime: { $lt: end },
+            endTime: { $gt: start },
+        };
+
+        // 👉 अगर full day block है (notAvailable)
+        if (notAvailable) {
+            conflictQuery = { escortId, date };
+        }
+
+        const isConflict = await BookingModel.findOne(conflictQuery);
+
+        if (isConflict) {
+            return response.status(400).json({
+                message:
+                    type === "availability"
+                        ? "Time slot already blocked"
+                        : "Time slot already booked",
+                success: false,
+                error: true,
+            });
+        }
+
+        // ✅ Create Booking / Availability
+        const booking = await BookingModel.create({
+            userId,
+            escortId,
+            date,
+            startTime: start,
+            endTime: end,
+            isAllDay,
+            status: status || "active",
+            title,
+            notAvailable,
+            type,
+        });
+
+        return response.status(201).json({
+            message:
+                type === "booking"
+                    ? "Booking added successfully"
+                    : "Availability added successfully",
+            success: true,
+            error: false,
+            data: booking,
+        });
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || "Server error",
+            success: false,
+            error: true,
+        });
     }
-
-    // ✅ Time Handling
-    let start = startTime;
-    let end = endTime;
-
-    if (isAllDay || notAvailable) {
-      start = "00:00";
-      end = "23:59";
-    }
-
-    // ✅ Time validation (only when needed)
-    if (!isAllDay && !notAvailable && start >= end) {
-      return response.status(400).json({
-        message: "End time must be greater than start time",
-        success: false,
-        error: true,
-      });
-    }
-
-    // ✅ Conflict Check (IMPORTANT LOGIC 🔥)
-    let conflictQuery = {
-      escortId,
-      date,
-      startTime: { $lt: end },
-      endTime: { $gt: start },
-    };
-
-    // 👉 अगर full day block है (notAvailable)
-    if (notAvailable) {
-      conflictQuery = { escortId, date };
-    }
-
-    const isConflict = await BookingModel.findOne(conflictQuery);
-
-    if (isConflict) {
-      return response.status(400).json({
-        message:
-          type === "availability"
-            ? "Time slot already blocked"
-            : "Time slot already booked",
-        success: false,
-        error: true,
-      });
-    }
-
-    // ✅ Create Booking / Availability
-    const booking = await BookingModel.create({
-      userId,
-      escortId,
-      date,
-      startTime: start,
-      endTime: end,
-      isAllDay,
-      status: status || "active",
-      title,
-      notAvailable,
-      type,
-    });
-
-    return response.status(201).json({
-      message:
-        type === "booking"
-          ? "Booking added successfully"
-          : "Availability added successfully",
-      success: true,
-      error: false,
-      data: booking,
-    });
-  } catch (error) {
-    return response.status(500).json({
-      message: error.message || "Server error",
-      success: false,
-      error: true,
-    });
-  }
 };
 
 // fetch booking
@@ -3049,3 +3049,351 @@ export const complteBooking = async (request, response) => {
         });
     }
 };
+
+// ==========================================< Add , Fetch, update, and delete Tour  >=====================================================================
+
+// add tour
+export const addTour = async (request, response) => {
+    try {
+        const { escortId, userId, city, startDate, endDate, tourNotes } = request.body;
+
+        // 🔴 Required validation
+        if (!escortId || !city || !startDate || !endDate) {
+            return response.status(400).json({
+                message: "EscortId, City, Start Date and End Date are required",
+                success: false,
+                error: true
+            });
+        }
+
+        // 🔴 Convert to Date (IMPORTANT)
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        // 🔴 Date validation
+        if (start > end) {
+            return response.status(400).json({
+                message: "Start date cannot be after end date",
+                success: false,
+                error: true
+            });
+        }
+
+        // 🔥 Overlapping check (escort-wise)
+        const existingTour = await TourModel.findOne({
+            escortId: escortId,
+            $or: [
+                {
+                    startDate: { $lte: end },
+                    endDate: { $gte: start },
+                },
+            ],
+        });
+
+        if (existingTour) {
+            return response.status(400).json({
+                message: "Tour dates overlap with existing tour",
+                success: false,
+                error: true
+            });
+        }
+
+        // ✅ Create new tour
+        const newTour = new TourModel({
+            escortId,
+            userId,
+            city,
+            startDate: start,
+            endDate: end,
+            tourNotes,
+        });
+
+        const savedTour = await newTour.save();
+
+        return response.status(201).json({
+            message: "Tour added successfully",
+            success: true,
+            error: false,
+            data: savedTour,
+        });
+
+    } catch (error) {
+        console.error("Add Tour Error:", error);
+
+        return response.status(500).json({
+            message: error.message || "Internal server error",
+            success: false,
+            error: true,
+        });
+    }
+};
+
+// fetching tour by date/month
+export const getToursByDate = async (request, response) => {
+  try {
+    const { escortId, date } = request.query;
+
+    if (!escortId || !date) {
+      return response.status(400).json({
+        message: "escortId and date are required",
+        success: false,
+        error: true,
+      });
+    }
+
+    const selectedDate = new Date(date);
+
+    // 🔥 Full day range (IMPORTANT)
+    const startOfDay = new Date(selectedDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(selectedDate.setHours(23, 59, 59, 999));
+
+    // 🔥 Find tours covering that day
+    const tours = await TourModel.find({
+      escortId,
+      startDate: { $lte: endOfDay },
+      endDate: { $gte: startOfDay },
+    });
+
+    return response.status(200).json({
+      message: "Tours fetched for selected date",
+      success: true,
+      error: false,
+      data: tours,
+    });
+
+  } catch (error) {
+    console.error("Get Tours By Date Error:", error);
+
+    return response.status(500).json({
+      message: error.message || "Internal server error",
+      success: false,
+      error: true,
+    });
+  }
+};
+
+// update tour
+export const updateTour = async (request, response) => {
+  try {
+    const { escortId , _id, city, startDate, endDate, tourNotes } = request.body;
+
+    // 🔴 Check tourId
+    if (!_id) {
+      return response.status(400).json({
+        message: "TourId is required",
+        success: false,
+        error: true,
+      });
+    }
+
+    // 🔍 Existing tour check
+    const existingTour = await TourModel.findById(_id);
+
+    if (!existingTour) {
+      return response.status(404).json({
+        message: "Tour not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // 🔴 Convert dates if provided
+    const start = startDate ? new Date(startDate) : existingTour.startDate;
+    const end = endDate ? new Date(endDate) : existingTour.endDate;
+
+    // ❗ Invalid date check
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return response.status(400).json({
+        message: "Invalid date format",
+        success: false,
+        error: true,
+      });
+    }
+
+    // 🔴 Date validation
+    if (start > end) {
+      return response.status(400).json({
+        message: "Start date cannot be after end date",
+        success: false,
+        error: true,
+      });
+    }
+
+    // 🔥 Overlap check (exclude current tour)
+    const overlapTour = await TourModel.findOne({
+      escortId: escortId || existingTour.escortId,
+      _id: { $ne: _id }, // ❗ exclude current
+      $or: [
+        {
+          startDate: { $lte: end },
+          endDate: { $gte: start },
+        },
+      ],
+    });
+
+    if (overlapTour) {
+      return response.status(400).json({
+        message: "Updated dates overlap with another tour",
+        success: false,
+        error: true,
+      });
+    }
+
+    // ✅ Update fields
+    existingTour.city = city || existingTour.city;
+    existingTour.startDate = start;
+    existingTour.endDate = end;
+    existingTour.tourNotes = tourNotes ?? existingTour.tourNotes;
+    existingTour.escortId = escortId || existingTour.escortId;
+
+    const updatedTour = await existingTour.save();
+
+    return response.status(200).json({
+      message: "Tour updated successfully",
+      success: true,
+      error: false,
+      data: updatedTour,
+    });
+
+  } catch (error) {
+    console.error("Update Tour Error:", error);
+
+    return response.status(500).json({
+      message: error.message || "Internal server error",
+      success: false,
+      error: true,
+    });
+  }
+};
+
+// delete tour
+export const deleteTour = async (request, response) => {
+  try {
+    const { _id, userId } = request.body;
+
+    // 🔴 Check tourId
+    if (!_id) {
+      return response.status(400).json({
+        message: "TourId is required",
+        success: false,
+        error: true,
+      });
+    }
+
+    // 🔍 Check if tour exists
+    const existingTour = await TourModel.findById(_id);
+
+    if (!existingTour) {
+      return response.status(404).json({
+        message: "Tour not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // 🔐 Optional: Ownership check (VERY IMPORTANT)
+    if (existingTour.userId.toString() !== request.userId) {
+      return response.status(403).json({
+        message: "Unauthorized to delete this tour",
+        success: false,
+        error: true,
+      });
+    }
+
+    // ❗ Optional: Prevent delete if active
+    const today = new Date();
+    if (existingTour.startDate <= today && existingTour.endDate >= today) {
+      return response.status(400).json({
+        message: "Cannot delete an ongoing tour",
+        success: false,
+        error: true,
+      });
+    }
+
+    // ✅ Delete
+    await TourModel.findByIdAndDelete(_id);
+
+    return response.status(200).json({
+      message: "Tour deleted successfully",
+      success: true,
+      error: false,
+    });
+
+  } catch (error) {
+    console.error("Delete Tour Error:", error);
+
+    return response.status(500).json({
+      message: error.message || "Internal server error",
+      success: false,
+      error: true,
+    });
+  }
+};
+
+// cancel tour
+export const cancelTour = async (request, response) => {
+  try {
+    const { _id, userId } = request.body;
+
+    // 🔴 validation
+    if (!_id) {
+      return response.status(400).json({
+        message: "TourId is required",
+        success: false,
+        error: true,
+      });
+    }
+
+    // 🔍 find tour
+    const existingTour = await TourModel.findById(_id);
+
+    if (!existingTour) {
+      return response.status(404).json({
+        message: "Tour not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // 🔐 ownership check
+    if (existingTour.userId.toString() !== request.userId) {
+      return response.status(403).json({
+        message: "Unauthorized to cancel this tour",
+        success: false,
+        error: true,
+      });
+    }
+
+    // ❗ already cancelled check
+    if (existingTour.status === "cancelled") {
+      return response.status(400).json({
+        message: "Tour is already cancelled",
+        success: false,
+        error: true,
+      });
+    }
+
+    // ✅ update status
+    existingTour.status = "cancelled";
+
+    const updatedTour = await existingTour.save();
+
+    return response.status(200).json({
+      message: "Tour cancelled successfully",
+      success: true,
+      error: false,
+      data: updatedTour,
+    });
+
+  } catch (error) {
+    console.error("Cancel Tour Error:", error);
+
+    return response.status(500).json({
+      message: error.message || "Internal server error",
+      success: false,
+      error: true,
+    });
+  }
+};
+
+// ==============================================================================================================================
