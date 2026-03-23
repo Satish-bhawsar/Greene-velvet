@@ -2748,7 +2748,7 @@ export const addBooking = async (request, response) => {
       startTime: start,
       endTime: end,
       isAllDay,
-      status: status || "pending",
+      status: status || "active",
       title,
       notAvailable,
       type,
