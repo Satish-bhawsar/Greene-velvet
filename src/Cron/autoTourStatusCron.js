@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import TourModel from "../models/tourModel";
+import TourModel from "../models/tourModel.js";
 
 export const autoTourStatusCron = () => {
   
