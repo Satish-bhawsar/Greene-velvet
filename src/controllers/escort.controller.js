@@ -3128,10 +3128,10 @@ export const addTour = async (request, response) => {
     }
 };
 
-// fetching tour by date/month
+// fetching tour by date and status
 export const getToursByDate = async (request, response) => {
   try {
-    const { escortId, date } = request.query;
+    const { escortId, date, status } = request.query;
 
     if (!escortId || !date) {
       return response.status(400).json({
@@ -3141,23 +3141,36 @@ export const getToursByDate = async (request, response) => {
       });
     }
 
+    // 🔥 Always parse safely
     const selectedDate = new Date(date);
 
-    // 🔥 Full day range (IMPORTANT)
-    const startOfDay = new Date(selectedDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(selectedDate.setHours(23, 59, 59, 999));
+    if (isNaN(selectedDate)) {
+      return response.status(400).json({
+        message: "Invalid date format",
+        success: false,
+        error: true,
+      });
+    }
 
-    // 🔥 Find tours covering that day
+    // 🔥 FIX timezone safe range
+    const startOfDay = new Date(selectedDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(selectedDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    // 🔥 OVERLAP LOGIC (CORRECT)
     const tours = await TourModel.find({
       escortId,
       startDate: { $lte: endOfDay },
       endDate: { $gte: startOfDay },
-    });
+    }).sort({ startDate: 1 });
 
     return response.status(200).json({
       message: "Tours fetched for selected date",
       success: true,
       error: false,
+      count: tours.length,
       data: tours,
     });
 
@@ -3171,7 +3184,6 @@ export const getToursByDate = async (request, response) => {
     });
   }
 };
-
 // update tour
 export const updateTour = async (request, response) => {
   try {
