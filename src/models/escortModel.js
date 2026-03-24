@@ -26,7 +26,7 @@ const EscortSchema = new mongoose.Schema({
         select: false
     },
     mobile: {
-        type: Number,
+        type: String,
         required: [true, "Provide account type"],
         unique: true
     },
