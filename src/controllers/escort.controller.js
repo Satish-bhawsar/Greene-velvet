@@ -3475,7 +3475,12 @@ export const getEscortContact = async (request, response) => {
     try {
         const { _id, type } = request.body;
 
+        console.log("_id ", _id);
+        console.log("type ", type);
+
         const escort = await EscortModel.findById(_id);
+
+        console.log("contact escort:  ", escort);
 
         if (!escort || !escort.mobile) {
             return response.status(404).json({
@@ -3497,12 +3502,15 @@ export const getEscortContact = async (request, response) => {
         if (type === "sms") link = `sms:${mobile}`;
         if (type === "whatsapp") link = `https://wa.me/${mobile}`;
 
+        console.log("link : ", link);
         return response.json({
             message: "fetched contact",
             success: true,
             error: false,
             link,
         });
+
+
 
     } catch (error) {
         return response.status(500).json({
