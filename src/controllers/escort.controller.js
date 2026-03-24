@@ -1161,6 +1161,11 @@ export async function fetchFiltercityescortscontroller(request, response) {
             query.rateFrom = { $gte: minRate };
         }
 
+        query.avatar = {
+            $exists: true,
+            $type: "string",
+            $nin: [null, ""]
+        };
 
         // 🔹 Fetch escorts (NO populate)
         const escortList = await EscortModel.find(query);
@@ -3428,6 +3433,8 @@ export async function fetchHomeSliderEscorts(request, response) {
 
         // City filter only if city is provided
         if (city) filter.city = city;
+
+        console.log("req filter: ", filter);
 
         const escorts = await EscortModel.find(filter);
 
