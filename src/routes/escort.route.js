@@ -83,6 +83,6 @@ escortRouter.patch("/cancel-tour", cancelTour);
 escortRouter.get("/fetch-home-slider-escorts", fetchHomeSliderEscorts);
 
 // get Escort contact link by Decryp mobile
-escortRouter.post("/escort/contact-link", rateLimit(5, 6000), getEscortContact);
+escortRouter.post("/contact-link", rateLimit(5, 6000), getEscortContact);
 
 export default escortRouter;
