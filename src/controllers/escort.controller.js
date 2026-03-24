@@ -3392,4 +3392,58 @@ export const cancelTour = async (request, response) => {
     }
 };
 
-// ==============================================================================================================================
+// ==========================================================< Fetch Home Slider Escorts >====================================================================
+
+export async function fetchHomeSliderEscorts(request, response) {
+    try {
+        const { role, isVerified, country, city } = request.query;
+
+        let filter = {};
+
+        if (role) filter.role = role;
+
+        if (!country) {
+            return response.status(400).json({
+                message: "country is missing",
+                error: true,
+                success: false
+            });
+        }
+        filter.country = country;
+
+        if (isVerified !== undefined)
+            filter.isVerified = isVerified === "true";
+
+        // Only escorts with avatar
+        filter.avatar = { $exists: true, $ne: null, $ne: "" };
+
+        // City filter only if city is provided
+        if (city) filter.city = city;
+
+        const escorts = await EscortModel.find(filter);
+
+        if (escorts.length === 0) {
+            return response.status(400).json({
+                message: "escorts not found",
+                error: true,
+                success: false
+            });
+        }
+
+        return response.status(200).json({
+            message: "Escort list fetched",
+            error: false,
+            success: true,
+            data: escorts
+        });
+
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        });
+    }
+}
+
+
