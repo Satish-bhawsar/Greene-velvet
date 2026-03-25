@@ -33,7 +33,7 @@ import { decrypt, encrypt } from "../utils/crypto.js";
 export async function registerEscortcontroller(request, response) {
     try {
 
-        const { name, email, password, mobile, country, city, account_classification, account_type, adverties_category } = request.body
+        const { name, email, password, mobile, country, countryCode, city, account_classification, account_type, adverties_category } = request.body
 
         const mobileEncrypted = "enc:" + encrypt(request.body.mobile);
 
@@ -81,6 +81,7 @@ export async function registerEscortcontroller(request, response) {
             password: hashPassword,
             mobile: mobileEncrypted,
             country,
+            countryCode,
             city,
             account_classification,
             account_type,
@@ -151,7 +152,7 @@ export async function verifyEmailcontroller(request, response) {
 // Escort change mobile number controll
 export async function changeMobilenumber(request, response) {
     try {
-        const { escortId, mobile } = request.body;
+        const { escortId, mobile, countryCode } = request.body;
 
         const mobileEncrypted = encrypt(request.body.mobile);
 
@@ -169,6 +170,7 @@ export async function changeMobilenumber(request, response) {
             {
                 mobile: mobileEncrypted,
                 isMobileVerified: false,
+                countryCode: countryCode,
             }
         )
 
@@ -185,7 +187,8 @@ export async function changeMobilenumber(request, response) {
             success: true,
             error: false,
             data: {
-                mobile: mobile
+                mobile: mobile,
+                countryCode: countryCode,
             },
         });
 
@@ -202,7 +205,7 @@ export async function changeMobilenumber(request, response) {
 export async function sendOtpcontroller(request, response) {
     try {
 
-        const { escortId, mobile } = request.body;
+        const { escortId, mobile, countryCode } = request.body;
 
         const escort = await EscortModel.findOne({ escortId });
 
@@ -263,7 +266,7 @@ export async function sendOtpcontroller(request, response) {
 // Escort verify mobile otp controll
 export async function verifyMobileotp(request, response) {
     try {
-        let { escortId, mobile, otp } = request.body; // 👈 let use karo
+        let { escortId, mobile, otp, countryCode } = request.body; // 👈 let use karo
 
         console.log("mobile and otp", mobile, otp);
 
@@ -3485,6 +3488,7 @@ export const getEscortContact = async (request, response) => {
         }
 
         let mobile = escort.mobile;
+        let countryCode = escort.countryCode || "";
 
         try {
             if (mobile.startsWith("enc:")) {
@@ -3505,7 +3509,7 @@ export const getEscortContact = async (request, response) => {
         if (type === "sms") {
             let mobileNumber = mobile.replace(/\D/g, "");
 
-            mobileNumber = "91" + mobileNumber;
+            mobileNumber = countryCode + mobileNumber;
 
             link = `sms:+${mobileNumber}`;
         }
@@ -3513,7 +3517,7 @@ export const getEscortContact = async (request, response) => {
         if (type === "call") {
             let mobileNumber = mobile.replace(/\D/g, "");
 
-            mobileNumber = "91" + mobileNumber;
+            mobileNumber = countryCode + mobileNumber;
 
             link = `tel:+${mobileNumber}`;
         }
@@ -3524,7 +3528,7 @@ export const getEscortContact = async (request, response) => {
             let mobileNumber = mobile.replace(/\D/g, "");
 
             // ⚠️ TEMP FIX (default code)
-            mobileNumber = "91" + mobileNumber;
+            mobileNumber = countryCode + mobileNumber;
 
             link = `https://wa.me/${mobileNumber}`;
         }

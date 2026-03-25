@@ -33,6 +33,9 @@ const EscortSchema = new mongoose.Schema({
     country: {
         type: String,
     },
+    countryCode: {
+        type: String,
+    },
     city: {
         type: String,
     },
