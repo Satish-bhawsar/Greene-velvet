@@ -3502,9 +3502,33 @@ export const getEscortContact = async (request, response) => {
 
         let link = "";
 
-        if (type === "call") link = `tel:${mobile}`;
-        if (type === "sms") link = `sms:${mobile}`;
-        if (type === "whatsapp") link = `https://wa.me/${mobile}`;
+        if (type === "sms") {
+            let mobileNumber = mobile.replace(/\D/g, "");
+
+            mobileNumber = "91" + mobileNumber;
+
+            link = `sms:+${mobileNumber}`;
+        }
+
+        if (type === "call") {
+            let mobileNumber = mobile.replace(/\D/g, "");
+
+            mobileNumber = "91" + mobileNumber;
+
+            link = `tel:+${mobileNumber}`;
+        }
+
+
+
+        if (type === "whatsapp") {
+            let mobileNumber = mobile.replace(/\D/g, "");
+
+            // ⚠️ TEMP FIX (default code)
+            mobileNumber = "91" + mobileNumber;
+
+            link = `https://wa.me/${mobileNumber}`;
+        }
+
 
         return response.json({
             message: "fetched success",
