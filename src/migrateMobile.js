@@ -3,56 +3,54 @@ dotenv.config();
 
 import mongoose from "mongoose";
 import EscortModel from "./models/escortModel.js";
-import { encrypt } from "./utils/crypto.js";
+import { encrypt , decrypt } from "./utils/crypto.js";
+
+const isNumber = (val) => /^\d{6,15}$/.test(val);
 
 const runMigration = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ DB Connected");
 
     const escorts = await EscortModel.find();
 
-    let updated = 0;
-    let skipped = 0;
-
     for (let e of escorts) {
-      if (!e.mobile) {
-        skipped++;
-        continue;
-      }
+      if (!e.mobile) continue;
 
       let mobileStr = String(e.mobile);
 
-      // 🔒 Already encrypted → skip
-      if (mobileStr.startsWith("enc:")) {
-        skipped++;
-        continue;
+      // ✅ skip correct
+      if (mobileStr.startsWith("enc:")) continue;
+
+      let finalMobile = null;
+
+      // 🔥 try decrypt
+      try {
+        const decrypted = decrypt(mobileStr);
+        if (isNumber(decrypted)) {
+          finalMobile = decrypted;
+        }
+      } catch {}
+
+      // 🔥 plain number
+      if (!finalMobile && isNumber(mobileStr)) {
+        finalMobile = mobileStr;
       }
 
-      // ❗ Only numbers allowed → extra safety
-      if (!/^\d+$/.test(mobileStr)) {
-        console.log("⚠️ Invalid mobile skipped:", mobileStr);
-        skipped++;
-        continue;
+      // 🔥 save clean
+      if (finalMobile) {
+        e.mobile = "enc:" + encrypt(finalMobile);
+        await e.save();
+        console.log("✔️ Fixed:", finalMobile);
+      } else {
+        console.log("⚠️ Skipped:", mobileStr);
       }
-
-      // 🔐 Encrypt & add prefix
-      e.mobile = "enc:" + encrypt(mobileStr);
-      await e.save();
-
-      updated++;
-      console.log("✔️ Encrypted:", mobileStr);
     }
 
-    console.log("\n🎯 Migration Summary:");
-    console.log("Updated:", updated);
-    console.log("Skipped:", skipped);
-
-    console.log("\n✅ Migration Done");
+    console.log("✅ CLEAN DONE");
     process.exit();
 
   } catch (err) {
-    console.error("❌ Migration Error:", err);
+    console.error(err);
     process.exit(1);
   }
 };

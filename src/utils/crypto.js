@@ -15,7 +15,7 @@ const SECRET_KEY = crypto
     .createHash("sha256")
     .update(SECRET)
     .digest("base64")
-    .substring();
+    .substring(0, 32);
 
 const IV = Buffer.alloc(16, 0); // simple IV (can randomize later)
 
@@ -32,3 +32,4 @@ export const decrypt = (encryptedText) => {
     decrypted += decipher.final("utf8");
     return decrypted;
 };
+

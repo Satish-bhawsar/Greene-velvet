@@ -35,7 +35,7 @@ export async function registerEscortcontroller(request, response) {
 
         const { name, email, password, mobile, country, city, account_classification, account_type, adverties_category } = request.body
 
-        const mobileEncrypted = encrypt(request.body.mobile);
+        const mobileEncrypted = "enc:" + encrypt(request.body.mobile);
 
         console.log(request.body);
 
@@ -46,7 +46,6 @@ export async function registerEscortcontroller(request, response) {
                 success: false
             })
         }
-
 
         const exstingEmail = await ClientModel.findOne({ email })
 
@@ -3475,12 +3474,7 @@ export const getEscortContact = async (request, response) => {
     try {
         const { _id, type } = request.body;
 
-        console.log("_id ", _id);
-        console.log("type ", type);
-
         const escort = await EscortModel.findById(_id);
-
-        console.log("contact escort:  ", escort);
 
         if (!escort || !escort.mobile) {
             return response.status(404).json({
@@ -3492,8 +3486,18 @@ export const getEscortContact = async (request, response) => {
 
         let mobile = escort.mobile;
 
-        if (typeof mobile === "string" && mobile.startsWith("enc:")) {
-            mobile = decrypt(mobile.replace("enc:", ""));
+        try {
+            if (mobile.startsWith("enc:")) {
+                mobile = decrypt(mobile.replace("enc:", ""));
+            } else {
+                mobile = decrypt(mobile); // fallback
+            }
+        } catch {
+            return response.status(500).json({
+                message: "Invalid mobile data",
+                success: false,
+                error: true
+            });
         }
 
         let link = "";
@@ -3502,22 +3506,19 @@ export const getEscortContact = async (request, response) => {
         if (type === "sms") link = `sms:${mobile}`;
         if (type === "whatsapp") link = `https://wa.me/${mobile}`;
 
-        console.log("link : ", link);
         return response.json({
-            message: "fetched contact",
+            message: "fetched success",
             success: true,
             error: false,
             link,
+
         });
-
-
 
     } catch (error) {
         return response.status(500).json({
-            message: error.message || "Server error",
+            message: "Server error",
             success: false,
             error: true
-
         });
     }
 };
