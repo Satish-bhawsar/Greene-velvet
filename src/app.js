@@ -4,6 +4,7 @@ import escortRouter from "./routes/escort.route.js";
 import clientRouter from "./routes/client.route.js"
 import adminRouter from "./routes/admin.route.js";
 import loginRouter from "./routes/login.route.js";
+import geoRouter from "./routes/geo.route.js";
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.get("/", (req, res) => {
 });
 
 /* Routes */
+app.use('/geo', geoRouter);
 app.use('/admin', adminRouter);
 app.use('/escort', escortRouter);
 app.use('/client', clientRouter);
