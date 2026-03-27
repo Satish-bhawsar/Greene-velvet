@@ -28,13 +28,13 @@ export const reverseGeo = async (lat, lng) => {
       const alt = components.find((c) =>
         c.types.includes("administrative_area_level_2")
       );
-      city = alt?.long_name || "Unknown";
+      city = alt?.long_name || "UNKNOWN";
     }
 
-    return { city, country: country || "Unknown", lat, lng };
+    return { city, country: country || "UNKNOWN", lat, lng };
   } catch (error) {
     console.log("Reverse Geo Error:", error.message);
     // fallback default location
-    return { city: "Mumbai", country: "India", lat: 19.076, lng: 72.8777 };
+    return { city: "ADELAIDE", country: "AUSTRALIA", lat: -34.9285, lng: 138.6007 };
   }
 };
