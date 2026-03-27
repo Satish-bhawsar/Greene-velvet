@@ -20,7 +20,7 @@ export const getGeoFromLatLng = async (request, response) => {
             message: error.message || "Server error",
             success: true,
             error: true,
-            data: { city: "ADELAIDE", country: "AUSTRALIA", lat: -34.9285, lng: 138.6007 },
+            data: { city: "UNKNOWN", country: "UNKNOWN", lat: -34.9285, lng: 138.6007 },
         });
     }
 };
