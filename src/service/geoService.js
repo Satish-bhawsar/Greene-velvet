@@ -1,12 +1,12 @@
 // backend/services/geoService.js
 import axios from "axios";
 
-const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_API_KEY;
 
 // 🔹 Primary: Lat/Lng → Google Reverse Geocode
 export const reverseGeo = async (lat, lng) => {
   try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`;
     const res = await axios.get(url);
 
     // गूगल स्टेटस चेक करें (ये बहुत ज़रूरी है)
