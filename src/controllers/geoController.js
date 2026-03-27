@@ -4,8 +4,11 @@ import { reverseGeo } from "../service/geoService.js";
 export const getGeoFromLatLng = async (request, response) => {
     try {
         const { lat, lng } = request.body;
+        
+        console.log("lat long : ", lat, lng);
 
         const data = await reverseGeo(lat, lng);
+
 
         return response.status(200).json({
             message: "success",

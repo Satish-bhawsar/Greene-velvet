@@ -5,6 +5,9 @@ const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
 // 🔹 Primary: Lat/Lng → Google Reverse Geocode
 export const reverseGeo = async (lat, lng) => {
+
+  console.log(" reverseGeo lat long: " , lat, lng);
+  
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}`;
 
@@ -32,6 +35,7 @@ export const reverseGeo = async (lat, lng) => {
     }
 
     return { city, country: country || "UNKNOWN", lat, lng };
+
   } catch (error) {
     console.log("Reverse Geo Error:", error.message);
     // fallback default location
